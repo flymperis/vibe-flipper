@@ -69,8 +69,8 @@ def sparkline(points: list[float], w=110, h=26) -> str:
     span = (hi - lo) or 1
     step = w / (len(points) - 1)
     coords = " ".join(f"{i * step:.1f},{h - 2 - (p - lo) / span * (h - 4):.1f}" for i, p in enumerate(points))
-    return (f'<svg class="spark" viewBox="0 0 {w} {h}" width="{w}" height="{h}" aria-hidden="true">'
-            f'<polyline points="{coords}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>')
+    return (f'<svg class="spark" viewBox="0 0 {w} {h}" width="{w}" height="{h}" preserveAspectRatio="none" aria-hidden="true">'
+            f'<polyline points="{coords}" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>')
 
 
 try:
@@ -98,6 +98,16 @@ templates.env.globals["SOURCES"] = SOURCES
 templates.env.globals["static_v"] = lambda name: int((HERE / "static" / name).stat().st_mtime)
 templates.env.globals["SPEC_KEYS"] = SPEC_KEYS
 templates.env.globals["SPEC_LABELS"] = SPEC_LABELS
+
+
+def with_query(request: Request, **changes) -> str:
+    """The current query string with some parameters replaced (None removes one)."""
+    items = [(k, v) for k, v in request.query_params.multi_items() if k not in changes]
+    items += [(k, v) for k, v in changes.items() if v is not None]
+    return "?" + urlencode(items)
+
+
+templates.env.globals["with_query"] = with_query
 templates.env.filters["gb"] = fmt_gb
 
 
@@ -171,6 +181,44 @@ def _visible_listings(query):
                         or_(Listing.product_id.is_(None), Listing.product.has(Product.active.is_(True))))
 
 
+# ---------- sorting of listing tables ----------
+
+# sort value -> label of the sort menu
+SORTS = {
+    "new": "Νεότερες", "old": "Παλαιότερες",
+    "price": "Φθηνότερες", "price_desc": "Ακριβότερες",
+    "margin": "Περιθώριο % ↓", "margin_asc": "Περιθώριο % ↑",
+    "profit": "Κέρδος € ↓", "profit_asc": "Κέρδος € ↑",
+    "market": "Αγοραία ↓", "market_asc": "Αγοραία ↑",
+    "product": "Προϊόν Α→Ω",
+}
+# table column -> (first click, second click)
+SORT_COLUMNS = {"listing": ("new", "old"), "product": ("product", "product"), "price": ("price", "price_desc"),
+                "market": ("market", "market_asc"), "profit": ("profit", "profit_asc"),
+                "margin": ("margin", "margin_asc")}
+ASC_SORTS = {"old", "price", "market_asc", "profit_asc", "margin_asc", "product"}
+_PROFIT_ATTR = {"margin": "margin_pct", "profit": "profit", "market": "market"}
+templates.env.globals.update(SORTS=SORTS, SORT_COLUMNS=SORT_COLUMNS, ASC_SORTS=ASC_SORTS)
+
+
+def sort_rows(rows: list[dict], sort: str) -> list[dict]:
+    """Sort listing rows ({"l", "p", "profit"}) by one of SORTS; unknown values = newest first."""
+    column, _, direction = sort.partition("_")
+    if column in _PROFIT_ATTR:
+        attr = _PROFIT_ATTR[column]
+        # broken / wanted ads and listings without a market price can't be flipped: always last
+        ok = [r for r in rows if r["profit"] is not None and not (r["l"].is_broken or r["l"].is_wanted_ad)]
+        rest = [r for r in rows if r["profit"] is None or r["l"].is_broken or r["l"].is_wanted_ad]
+        return sorted(ok, key=lambda r: getattr(r["profit"], attr), reverse=direction != "asc") + rest
+    if column == "price":
+        sign = -1 if direction == "desc" else 1
+        return sorted(rows, key=lambda r: (r["l"].price is None, sign * (r["l"].price or 0)))
+    if column == "product":
+        return sorted(rows, key=lambda r: (r["p"] is None, natural_key(r["p"].name) if r["p"] else [],
+                                           r["l"].price or 0))
+    return sorted(rows, key=lambda r: r["l"].first_seen, reverse=sort != "old")
+
+
 # ---------- dashboard ----------
 
 # Tile order / icons for known categories; unknown categories follow alphabetically.
@@ -231,11 +279,7 @@ def dashboard(request: Request, source: str = "", category: list[str] = Query([]
         rows = _rows(s, q_rows.order_by(Listing.first_seen.desc()).all())
     if deals:
         rows = [r for r in rows if r["profit"] and r["profit"].is_deal]
-    if sort in ("margin", "profit"):
-        key = "margin_pct" if sort == "margin" else "profit"
-        # broken / wanted ads can't be flipped: keep them below everything else
-        rows = sorted(rows, key=lambda r: (not (r["l"].is_broken or r["l"].is_wanted_ad) and r["profit"] is not None,
-                                           getattr(r["profit"], key) if r["profit"] else 0), reverse=True)
+    rows = sort_rows(rows, sort)
     total = len(rows)
     rows = _add_was(s, rows[(page - 1) * PAGE_SIZE: page * PAGE_SIZE])
 
@@ -374,15 +418,15 @@ def _product_listings(s: Session, pid: int, days: int, variant: str, foreign: bo
 
 @router.get("/products/{pid}", response_class=HTMLResponse)
 def product_detail(request: Request, pid: int, days: int = 90, variant: str = "", foreign: bool = False,
-                   s: Session = Depends(get_session)):
+                   sort: str = "new", s: Session = Depends(get_session)):
     p = s.get(Product, pid) or _404()
     listings = _product_listings(s, pid, days, variant, foreign)
     categories = sorted({c for (c,) in s.query(Product.category).distinct() if c})
     variants = variant_table(p)
     unknown = (s.query(func.count(Listing.id)).filter(Listing.product_id == pid, Listing.variant.is_(None)).scalar()
                if p.spec_keys else 0)
-    return _render(request, "product.html", p=p, rows=_add_was(s, _rows(s, listings)), days=days,
-                   categories=categories,
+    return _render(request, "product.html", p=p, rows=_add_was(s, sort_rows(_rows(s, listings), sort)), days=days,
+                   categories=categories, sort=sort,
                    min_samples=get_settings().min_samples, variants=variants, variant=variant,
                    selected=next((v for v in variants if v["label"] == variant), None),
                    unknown_variant=unknown, min_variant_samples=pricing.MIN_VARIANT_SAMPLES, foreign=foreign,

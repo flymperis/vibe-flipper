@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import listing_row, listing_head, pager with context %}
+{% from "_macros.html" import listing_row, listing_head, pager, sort_select, filters_toggle with context %}
 {% block content %}
 <section class="tiles" aria-label="Κατηγορίες">
   <a class="tile tile-all {{ 'on' if not f.category }}" href="/?{{ tile_qs }}">
@@ -31,32 +31,33 @@
 
 <form class="panel filters" method="get">
   <input type="search" name="q" value="{{ f.q }}" placeholder="Αναζήτηση τίτλου…">
-  <select name="source"><option value="">Όλα τα sites</option>
-    {% for s in enabled_sources %}<option {{ 'selected' if f.source == s }}>{{ s }}</option>{% endfor %}</select>
   {% for c in f.category %}<input type="hidden" name="category" value="{{ c }}">{% endfor %}
-  <select name="product_id" onchange="this.form.submit()"><option value="">{{ 'Όλα τα προϊόντα' if not f.category else 'Όλα: ' ~ f.category|join(', ') }}</option>
+  <select name="product_id" class="wide" onchange="this.form.submit()" aria-label="Προϊόν"><option value="">{{ 'Όλα τα προϊόντα' if not f.category else 'Όλα: ' ~ f.category|join(', ') }}</option>
     {% for p in products %}<option value="{{ p.id }}" {{ 'selected' if f.product_id == p.id|string }}>{{ p.name }}</option>{% endfor %}</select>
-  <select name="matched">
-    <option value="matched" {{ 'selected' if f.matched == 'matched' }}>Μόνο με προϊόν</option>
-    <option value="all" {{ 'selected' if f.matched == 'all' }}>Όλες</option>
-    <option value="unmatched" {{ 'selected' if f.matched == 'unmatched' }}>Χωρίς προϊόν</option>
-  </select>
-  <select name="days">{% for d in [1, 3, 7, 14, 30, 90] %}<option value="{{ d }}" {{ 'selected' if f.days == d }}>{{ d }} {{ 'μέρα' if d == 1 else 'μέρες' }}</option>{% endfor %}</select>
-  <select name="sort">
-    <option value="new" {{ 'selected' if f.sort == 'new' }}>Νεότερες</option>
-    <option value="margin" {{ 'selected' if f.sort == 'margin' }}>Περιθώριο %</option>
-    <option value="profit" {{ 'selected' if f.sort == 'profit' }}>Κέρδος €</option>
-  </select>
-  <label class="chk"><input type="checkbox" name="deals" value="true" {{ 'checked' if f.deals }}> Μόνο deals</label>
-  {% if countries %}<label class="chk" title="Δείχνονται μόνο πωλητές από: {{ countries|join(', ') }}"><input type="checkbox" name="foreign" value="true" {{ 'checked' if f.foreign }}> Και εξωτερικό</label>{% endif %}
-  <button type="submit">Φίλτρο</button>
-  <a class="btn ghost" href="/?reset=1" title="Επαναφορά των φίλτρων (αλλιώς μένουν αποθηκευμένα)">Καθαρισμός</a>
-  <span class="muted small">{{ total }} αποτελέσματα</span>
+  {{ sort_select(f.sort) }}
+  {{ filters_toggle() }}
+  <div class="more">
+    <select name="source" aria-label="Site"><option value="">Όλα τα sites</option>
+      {% for s in enabled_sources %}<option {{ 'selected' if f.source == s }}>{{ s }}</option>{% endfor %}</select>
+    <select name="matched" aria-label="Αντιστοίχιση">
+      <option value="matched" {{ 'selected' if f.matched == 'matched' }}>Μόνο με προϊόν</option>
+      <option value="all" {{ 'selected' if f.matched == 'all' }}>Όλες</option>
+      <option value="unmatched" {{ 'selected' if f.matched == 'unmatched' }}>Χωρίς προϊόν</option>
+    </select>
+    <select name="days" data-default="7" aria-label="Διάστημα">{% for d in [1, 3, 7, 14, 30, 90] %}<option value="{{ d }}" {{ 'selected' if f.days == d }}>{{ d }} {{ 'μέρα' if d == 1 else 'μέρες' }}</option>{% endfor %}</select>
+    <div class="checks">
+      <label class="chk"><input type="checkbox" name="deals" value="true" {{ 'checked' if f.deals }}> Μόνο deals</label>
+      {% if countries %}<label class="chk" title="Δείχνονται μόνο πωλητές από: {{ countries|join(', ') }}"><input type="checkbox" name="foreign" value="true" {{ 'checked' if f.foreign }}> Και εξωτερικό</label>{% endif %}
+    </div>
+    <button type="submit">Φίλτρο</button>
+    <a class="btn ghost" href="/?reset=1" title="Επαναφορά των φίλτρων (αλλιώς μένουν αποθηκευμένα)">Καθαρισμός</a>
+  </div>
+  <span class="muted small count">{{ total }} αποτελέσματα</span>
 </form>
 
 <div class="panel table-wrap">
-  <table>
-    <thead>{{ listing_head() }}</thead>
+  <table class="cards listings">
+    <thead>{{ listing_head(sort=f.sort) }}</thead>
     <tbody>
       {% for r in rows %}{{ listing_row(r) }}{% else %}
       <tr><td colspan="7" class="muted pad">Καμία αγγελία. Πάτα «Refresh τώρα» ή άλλαξε τα φίλτρα.</td></tr>{% endfor %}
@@ -64,4 +65,13 @@
   </table>
 </div>
 {{ pager(page, pages) }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const strip = document.querySelector('.tiles'), on = strip && strip.querySelector('.tile-grid .tile.on');
+  if (on && strip.scrollWidth > strip.clientWidth) strip.scrollLeft = on.offsetLeft - 12;
+})();
+</script>
 {% endblock %}

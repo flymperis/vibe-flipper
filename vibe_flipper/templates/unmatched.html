@@ -1,33 +1,37 @@
 {% extends "base.html" %}
-{% from "_macros.html" import pager with context %}
+{% from "_macros.html" import pager, filters_toggle with context %}
 {% block title %}Χωρίς αντιστοίχιση · Vibe Flipper{% endblock %}
 {% block content %}
 <h1>Χωρίς αντιστοίχιση <span class="muted small">{{ total }}</span></h1>
 <form class="panel filters" method="get">
   <input type="search" name="q" value="{{ f.q }}" placeholder="Αναζήτηση τίτλου…">
-  <select name="source"><option value="">Όλα τα sites</option>
-    {% for s in enabled_sources %}<option {{ 'selected' if f.source == s }}>{{ s }}</option>{% endfor %}</select>
-  <select name="days">{% for d in [3, 7, 14, 30, 90] %}<option value="{{ d }}" {{ 'selected' if f.days == d }}>{{ d }} μέρες</option>{% endfor %}</select>
-  <label class="chk"><input type="checkbox" name="show_rejected" value="true" {{ 'checked' if f.show_rejected }}> Δείξε και όσα απορρίφθηκαν (τιμή / αξεσουάρ)</label>
-  <button type="submit">Φίλτρο</button>
+  {{ filters_toggle(full=True) }}
+  <div class="more">
+    <select name="source" aria-label="Site"><option value="">Όλα τα sites</option>
+      {% for s in enabled_sources %}<option {{ 'selected' if f.source == s }}>{{ s }}</option>{% endfor %}</select>
+    <select name="days" data-default="14" aria-label="Διάστημα">{% for d in [3, 7, 14, 30, 90] %}<option value="{{ d }}" {{ 'selected' if f.days == d }}>{{ d }} μέρες</option>{% endfor %}</select>
+    <label class="chk wide"><input type="checkbox" name="show_rejected" value="true" {{ 'checked' if f.show_rejected }}> Δείξε και όσα απορρίφθηκαν (τιμή / αξεσουάρ)</label>
+    <button type="submit">Φίλτρο</button>
+  </div>
 </form>
 <div class="panel table-wrap">
-  <table>
+  <table class="cards unmatched">
     <thead><tr><th></th><th>Αγγελία</th><th class="num">Τιμή</th><th>Σημείωση</th><th>Αντιστοίχιση</th></tr></thead>
     <tbody>
     {% for l in listings %}
       <tr>
-        <td>{% if l.image_url %}<img class="thumb" src="{{ l.image_url }}" loading="lazy" alt="">{% else %}<div class="thumb"></div>{% endif %}</td>
+        <td class="c-thumb"><a href="{{ l.url }}" target="_blank" rel="noopener" tabindex="-1">{% if l.image_url %}<img class="thumb" src="{{ l.image_url }}" loading="lazy" alt="">{% else %}<div class="thumb"></div>{% endif %}</a></td>
         <td class="title"><a href="{{ l.url }}" target="_blank" rel="noopener">{{ l.title }}</a>
-          <div class="row small muted" style="gap:6px"><span class="badge src-{{ l.source }}">{{ l.source }}</span>
+          <div class="row small muted meta"><span class="badge src-{{ l.source }}">{{ l.source }}</span>
+            <b class="m-only">{{ l.price|eur }}</b>
             {% if l.is_wanted_ad %}<span class="badge bad">ζητείται</span>{% endif %}
             <span>πριν {{ l.first_seen|ago }}</span></div></td>
-        <td class="num">{{ l.price|eur }}</td>
-        <td class="small muted">{{ l.match_note or '' }}</td>
-        <td>
-          <div class="actions">
+        <td class="num d-only">{{ l.price|eur }}</td>
+        <td class="small muted c-full c-note">{{ l.match_note or '' }}</td>
+        <td class="c-full">
+          <div class="actions assign">
             <form method="post" action="/listings/{{ l.id }}/assign" class="row" style="gap:4px">
-              <select name="product_id" style="max-width:190px">
+              <select name="product_id" aria-label="Προϊόν">
                 <option value="">— δεν είναι προϊόν —</option>
                 {% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
               </select>

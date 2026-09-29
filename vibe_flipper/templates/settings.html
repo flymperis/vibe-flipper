@@ -72,15 +72,15 @@
 
     <h2>Τελευταία scrapes</h2>
     <div class="table-wrap">
-      <table>
+      <table class="cards runs">
         <thead><tr><th>Site</th><th>Πότε</th><th class="num">Βρέθηκαν</th><th class="num">Νέες</th><th>Κατάσταση</th></tr></thead>
         <tbody>
         {% for r in runs %}
           <tr>
             <td><span class="badge src-{{ r.source }}">{{ r.source }}</span></td>
             <td class="small">πριν {{ r.started_at|ago }}</td>
-            <td class="num">{{ r.found }}</td><td class="num">{{ r.new }}</td>
-            <td>{% if r.ok %}<span class="pos">OK</span>{% elif r.finished_at %}<span class="neg">Σφάλμα</span><pre class="err">{{ r.error }}</pre>{% else %}<span class="spinner"></span>{% endif %}</td>
+            <td class="num" data-label="βρέθηκαν">{{ r.found }}</td><td class="num" data-label="νέες">{{ r.new }}</td>
+            <td class="c-status">{% if r.ok %}<span class="pos">OK</span>{% elif r.finished_at %}<span class="neg">Σφάλμα</span><pre class="err">{{ r.error }}</pre>{% else %}<span class="spinner"></span>{% endif %}</td>
           </tr>
         {% else %}<tr><td colspan="5" class="muted">Κανένα ακόμα.</td></tr>{% endfor %}
         </tbody>

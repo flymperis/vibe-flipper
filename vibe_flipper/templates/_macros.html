@@ -1,10 +1,10 @@
 {% macro listing_row(r, show_product=True, actions=False) %}
 {% set l = r.l %}{% set pr = r.profit %}
 <tr>
-  <td>{% if l.image_url %}<img class="thumb" src="{{ l.image_url }}" loading="lazy" alt="">{% else %}<div class="thumb"></div>{% endif %}</td>
+  <td class="c-thumb"><a href="{{ l.url }}" target="_blank" rel="noopener" tabindex="-1">{% if l.image_url %}<img class="thumb" src="{{ l.image_url }}" loading="lazy" alt="">{% else %}<div class="thumb"></div>{% endif %}</a></td>
   <td class="title">
     <a href="{{ l.url }}" target="_blank" rel="noopener">{{ l.title }}</a>
-    <div class="row small muted" style="gap:6px;margin-top:2px">
+    <div class="row small muted meta">
       <span class="badge src-{{ l.source }}">{{ l.source }}</span>
       {% if l.country and l.country != 'GR' %}<span class="badge warn" title="Χώρα πωλητή">{{ l.country }}</span>
       {% elif l.source == 'vinted' and l.location %}<span class="badge" title="Πόλη πωλητή">{{ l.location }}</span>
@@ -21,19 +21,19 @@
     </div>
   </td>
   {% if show_product %}
-  <td>{% if r.p %}<a href="/products/{{ r.p.id }}">{{ r.p.name }}</a>
+  <td class="c-full c-product">{% if r.p %}<a href="/products/{{ r.p.id }}">{{ r.p.name }}</a>
       <div class="small muted" title="{{ l.match_note or '' }}">{{ l.match_method }}{% if l.match_confidence %} · {{ '%.0f'|format(l.match_confidence*100) }}%{% endif %}</div>
       {% else %}<span class="muted">–</span>{% endif %}</td>
   {% endif %}
-  <td class="num">{{ l.price|eur }}{% if r.was %}<div class="small {{ 'pos' if r.was > l.price else 'neg' }}" title="Αρχική τιμή της αγγελίας: {{ r.was|eur }}">{{ '↓' if r.was > l.price else '↑' }} από {{ r.was|eur }}</div>{% endif %}{% if l.buy_cost and l.buy_cost != l.price %}<div class="small muted" title="με τα έξοδα αγοραστή">{{ l.buy_cost|eur }}</div>{% endif %}</td>
-  <td class="num">{% if pr %}{{ pr.market|eur }}{% if pr.low_data %} <span class="badge warn" title="λίγα δείγματα">λίγα</span>{% endif %}
+  <td class="num c-metric" data-label="Τιμή"><b>{{ l.price|eur }}</b>{% if r.was %}<div class="small {{ 'pos' if r.was > l.price else 'neg' }}" title="Αρχική τιμή της αγγελίας: {{ r.was|eur }}">{{ '↓' if r.was > l.price else '↑' }} από {{ r.was|eur }}</div>{% endif %}{% if l.buy_cost and l.buy_cost != l.price %}<div class="small muted" title="με τα έξοδα αγοραστή">{{ l.buy_cost|eur }}</div>{% endif %}</td>
+  <td class="num c-metric" data-label="Αγοραία">{% if pr %}{{ pr.market|eur }}{% if pr.low_data %} <span class="badge warn" title="λίγα δείγματα">λίγα</span>{% endif %}
       {% if pr.variant %}<div class="small muted" title="{% if pr.assumed %}Άγνωστη παραλλαγή: σύγκριση με τη φθηνότερη παραλλαγή{% elif pr.estimated %}Λίγες αγγελίες {{ pr.variant }}: εκτίμηση από {{ pr.basis }}{% else %}Διάμεση της ίδιας παραλλαγής{% endif %}">{{ '≥ ' if pr.assumed }}{{ '~ ' if pr.estimated }}{{ pr.variant }}</div>{% endif %}
       {% else %}<span class="muted">–</span>{% endif %}</td>
-  <td class="num">{% if pr %}<span class="{{ 'pos' if pr.profit > 0 else 'neg' }}">{{ pr.profit|eur(true) }}</span>{% else %}–{% endif %}</td>
-  <td class="num">{% if pr %}<span class="{{ 'pos' if pr.margin_pct > 0 else 'neg' }}">{{ '%+.0f'|format(pr.margin_pct) }}%</span>
+  <td class="num c-metric" data-label="Κέρδος">{% if pr %}<span class="{{ 'pos' if pr.profit > 0 else 'neg' }}">{{ pr.profit|eur(true) }}</span>{% else %}–{% endif %}</td>
+  <td class="num c-metric" data-label="Περιθώριο">{% if pr %}<span class="{{ 'pos' if pr.margin_pct > 0 else 'neg' }}">{{ '%+.0f'|format(pr.margin_pct) }}%</span>
       {% if pr.is_deal %}<div><span class="badge deal">DEAL</span></div>{% endif %}{% else %}–{% endif %}</td>
   {% if actions %}
-  <td><div class="actions">
+  <td class="c-full c-actions"><div class="actions">
     <form method="post" action="/listings/{{ l.id }}/toggle/excluded"><button class="ghost" title="Να (μη) μετράει στη μέση τιμή">{{ 'Μέτρα' if l.excluded else 'Εκτός stats' }}</button></form>
     <form method="post" action="/listings/{{ l.id }}/toggle/is_bundle"><button class="ghost">{{ 'Όχι bundle' if l.is_bundle else 'Bundle' }}</button></form>
     <form method="post" action="/listings/{{ l.id }}/assign"><input type="hidden" name="product_id" value=""><button class="ghost" title="Δεν είναι αυτό το προϊόν">Λάθος προϊόν</button></form>
@@ -42,21 +42,52 @@
 </tr>
 {% endmacro %}
 
-{% macro listing_head(show_product=True, actions=False) %}
+{# A column header that sorts the table: first click = its usual direction, next click = the other one. #}
+{% macro sort_th(label, column, sort, cls='') %}
+{% set first, second = SORT_COLUMNS[column] %}
+{% set active = sort in (first, second) %}
+{% set asc = sort in ASC_SORTS %}
+<th class="sortable {{ cls }} {{ 'sorted' if active }}" aria-sort="{{ ('ascending' if asc else 'descending') if active else 'none' }}">
+  <a href="{{ with_query(request, sort=second if sort == first else first, page=None) }}" title="Ταξινόμηση: {{ SORTS[second if sort == first else first] }}">{{ label }}<span class="arrow" aria-hidden="true">{{ ('▲' if asc else '▼') if active else '↕' }}</span></a></th>
+{% endmacro %}
+
+{% macro listing_head(show_product=True, actions=False, sort=None) %}
+{% if sort %}
+<tr><th></th>{{ sort_th('Αγγελία', 'listing', sort) }}{% if show_product %}{{ sort_th('Προϊόν', 'product', sort) }}{% endif %}
+{{ sort_th('Τιμή', 'price', sort, 'num') }}{{ sort_th('Αγοραία τιμή', 'market', sort, 'num') }}{{ sort_th('Κέρδος', 'profit', sort, 'num') }}{{ sort_th('Περιθώριο', 'margin', sort, 'num') }}{% if actions %}<th></th>{% endif %}</tr>
+{% else %}
 <tr><th></th><th>Αγγελία</th>{% if show_product %}<th>Προϊόν</th>{% endif %}
 <th class="num">Τιμή</th><th class="num">Αγοραία τιμή</th><th class="num">Κέρδος</th><th class="num">Περιθώριο</th>{% if actions %}<th></th>{% endif %}</tr>
+{% endif %}
+{% endmacro %}
+
+{# Sort menu: the only way to sort on a phone, where the table headers are hidden. #}
+{% macro sort_select(sort, skip=()) %}
+<select name="sort" aria-label="Ταξινόμηση" onchange="this.form.submit()">
+  {% for k, label in SORTS.items() if k not in skip %}<option value="{{ k }}" {{ 'selected' if sort == k }}>↕ {{ label }}</option>{% endfor %}
+</select>
+{% endmacro %}
+
+{# Filters form parts: on a phone only the main row shows, the rest opens with the "Φίλτρα" button. #}
+{% macro filters_toggle(full=False) %}
+<button type="button" class="ghost m-only filters-toggle {{ 'full' if full }}" aria-expanded="false"
+  onclick="const f=this.form;f.classList.toggle('open');this.setAttribute('aria-expanded',f.classList.contains('open'))">
+  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+  Φίλτρα<span class="filters-count"></span></button>
 {% endmacro %}
 
 {% macro pager(page, pages) %}
 {% if pages > 1 %}
-<div class="pager">
-  {% set qs = request.query_params|dictsort %}
+<nav class="pager" aria-label="Σελίδες">
+  {% if page > 1 %}<a class="btn ghost" href="{{ with_query(request, page=page - 1) }}" aria-label="Προηγούμενη">‹</a>{% endif %}
   {% for n in range(1, pages + 1) %}
-    {% if n == page %}<span class="btn">{{ n }}</span>
-    {% elif n <= 3 or n > pages - 2 or (n - page)|abs <= 2 %}
-      <a class="btn ghost" href="?{% for k, v in qs if k != 'page' %}{{ k }}={{ v|urlencode }}&{% endfor %}page={{ n }}">{{ n }}</a>
-    {% elif n == 4 or n == pages - 2 %}<span class="muted">…</span>{% endif %}
+    {% if n == page %}<span class="btn" aria-current="page">{{ n }}</span>
+    {% elif n == 1 or n == pages or (n - page)|abs <= 1 %}
+      <a class="btn ghost" href="{{ with_query(request, page=n) }}">{{ n }}</a>
+    {% elif n == 2 or n == pages - 1 %}<span class="muted">…</span>{% endif %}
   {% endfor %}
-</div>
+  {% if page < pages %}<a class="btn ghost" href="{{ with_query(request, page=page + 1) }}" aria-label="Επόμενη">›</a>{% endif %}
+  <span class="pager-info muted small">σελ. {{ page }}/{{ pages }}</span>
+</nav>
 {% endif %}
 {% endmacro %}

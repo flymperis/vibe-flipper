@@ -73,3 +73,37 @@ def test_category_tiles_toggle():
     assert _tile_href(qs, ["GPU"], "CPU") == "/?sort=new&days=7&category=GPU&category=CPU"  # add
     assert _tile_href(qs, ["GPU", "CPU"], "GPU") == "/?sort=new&days=7&category=CPU"      # deselect
     assert _tile_href(qs, ["GPU"], "GPU") == "/?sort=new&days=7"                          # back to all
+
+
+def _sort_row(id, price, profit=None, margin=None, market=None, product=None, broken=False, age=0):
+    from datetime import datetime, timedelta
+    from types import SimpleNamespace as NS
+    l = NS(id=id, price=price, is_broken=broken, is_wanted_ad=False,
+           first_seen=datetime(2026, 9, 1) - timedelta(hours=age))
+    pr = None if profit is None else NS(profit=profit, margin_pct=margin, market=market)
+    return {"l": l, "p": NS(name=product) if product else None, "profit": pr}
+
+
+def test_listing_sorts():
+    from vibe_flipper.web import SORTS, sort_rows
+    rows = [_sort_row(1, 300, 50, 16, 400, "RTX 3070", age=3),
+            _sort_row(2, 100, 80, 80, 200, "RTX 3060", age=1),
+            _sort_row(3, 200, age=2),                                       # no market price
+            _sort_row(4, 50, 500, 900, 600, "RTX 3060 Ti", broken=True, age=0)]
+    ids = lambda sort: [r["l"].id for r in sort_rows(rows, sort)]
+    assert ids("new") == [4, 2, 3, 1] and ids("old") == [1, 3, 2, 4]
+    assert ids("price") == [4, 2, 3, 1] and ids("price_desc") == [1, 3, 2, 4]
+    # without a market price or broken: always last, whatever the direction
+    assert ids("margin") == [2, 1, 3, 4] and ids("margin_asc") == [1, 2, 3, 4]
+    assert ids("profit") == [2, 1, 3, 4] and ids("market") == [1, 2, 3, 4] and ids("market_asc") == [2, 1, 3, 4]
+    assert ids("product") == [2, 4, 1, 3]                          # natural order, unmatched last
+    assert ids("bogus") == ids("new")
+    for sort in SORTS:
+        assert sorted(ids(sort)) == [1, 2, 3, 4]
+
+
+def test_sort_headers_keep_filters():
+    from vibe_flipper.web import with_query
+    req = _request("category=GPU&category=CPU&sort=price&page=3")
+    assert with_query(req, sort="price_desc", page=None) == "?category=GPU&category=CPU&sort=price_desc"
+    assert with_query(req, page=4) == "?category=GPU&category=CPU&sort=price&page=4"

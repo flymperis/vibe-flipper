@@ -1,14 +1,15 @@
 {% extends "base.html" %}
-{% from "_macros.html" import listing_row, listing_head with context %}
+{% from "_macros.html" import listing_row, listing_head, sort_select with context %}
 {% block title %}{{ p.name }} · Vibe Flipper{% endblock %}
 {% block head %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 {% endblock %}
 {% block content %}
-<div class="row" style="justify-content:space-between">
+<div class="row page-head">
   <h1 style="margin:0">{{ p.name }} <span class="muted small">{{ p.category }}</span></h1>
-  <form method="get" class="row">
+  <form method="get" class="row page-filters">
+    <input type="hidden" name="sort" value="{{ sort }}">
     {% if p.spec_keys %}
     <select name="variant" onchange="this.form.submit()">
       <option value="">Όλες οι παραλλαγές</option>
@@ -21,7 +22,7 @@
   </form>
 </div>
 
-<div class="stats" style="margin-top:14px">
+<div class="stats">
   {% if selected %}
   {% set st = selected.st %}{% set m = selected.market %}
   <div class="panel stat"><div class="v">{{ m.price|eur if m else '–' }}</div><div class="k">αγοραία τιμή {{ selected.label }}{% if m and m.estimated %} · <span class="warn-text" title="Λίγες αγγελίες: εκτίμηση από {{ m.basis }}">εκτίμηση</span>{% endif %}</div></div>
@@ -39,21 +40,21 @@
 {% if p.spec_keys %}
 <h2>Τιμές ανά παραλλαγή <span class="muted small">({% for k in p.spec_keys %}{{ SPEC_LABELS[k] }}{{ ' + ' if not loop.last }}{% endfor %})</span></h2>
 <form class="panel table-wrap" style="margin-bottom:14px" method="post" action="/products/{{ p.id }}/ranges">
-  <table>
+  <table class="cards variants">
     <thead><tr><th>Παραλλαγή</th><th class="num" title="Η τιμή με την οποία συγκρίνονται οι αγγελίες αυτής της παραλλαγής">Αγοραία</th>
       <th class="num">Διάμεση</th><th class="num">Εύρος p25–p75</th><th class="num">Δείγματα</th>
       <th title="Αγγελίες αυτής της παραλλαγής εκτός εύρους δεν αντιστοιχίζονται. Κενό = το min/max του προϊόντος">Εύρος αντιστοίχισης €</th></tr></thead>
     <tbody>
     {% for v in variants %}{% set st = v.st %}{% set m = v.market %}
       <tr>
-        <td><a href="?variant={{ v.label|urlencode }}&days={{ days }}"><span class="badge spec">{{ v.label }}</span></a></td>
-        <td class="num">{% if m %}<b>{{ '~' if m.estimated }}{{ m.price|eur }}</b>
+        <td class="c-full"><a href="{{ with_query(request, variant=v.label) }}"><span class="badge spec">{{ v.label }}</span></a></td>
+        <td class="num c-metric" data-label="Αγοραία">{% if m %}<b>{{ '~' if m.estimated }}{{ m.price|eur }}</b>
             {% if m.estimated %}<div class="small muted" title="Λιγότερα από {{ min_variant_samples }} δείγματα: εκτίμηση από την παραλλαγή {{ m.basis }} (+ανά διπλασιασμό RAM/αποθήκευσης){% if st %}, μαζί με τις {{ st.count }} δικές της αγγελίες{% endif %}">εκτίμηση από {{ m.basis }}</div>{% endif %}
             {% else %}<span class="muted">–</span>{% endif %}</td>
-        <td class="num">{{ st.median|eur if st else '–' }}</td>
-        <td class="num muted">{% if st %}{{ st.p25|eur }} – {{ st.p75|eur }}{% else %}–{% endif %}</td>
-        <td class="num">{{ st.count if st else 0 }}{% if not st or st.count < min_variant_samples %} <span class="badge warn">λίγα</span>{% endif %}</td>
-        <td><input type="hidden" name="label" value="{{ v.label }}">
+        <td class="num c-metric" data-label="Διάμεση">{{ st.median|eur if st else '–' }}</td>
+        <td class="num muted c-metric" data-label="p25–p75">{% if st %}{{ st.p25|eur }} – {{ st.p75|eur }}{% else %}–{% endif %}</td>
+        <td class="num c-metric" data-label="Δείγματα">{{ st.count if st else 0 }}{% if not st or st.count < min_variant_samples %} <span class="badge warn">λίγα</span>{% endif %}</td>
+        <td class="c-full" data-label="Εύρος αντιστοίχισης €"><input type="hidden" name="label" value="{{ v.label }}">
           <span class="row" style="gap:4px;flex-wrap:nowrap">
             <input name="range_min_{{ v.label }}" size="5" inputmode="decimal" placeholder="{{ '%g'|format(p.min_price) if p.min_price is not none else 'min' }}" value="{{ '%g'|format(v.range.min) if v.range and v.range.min is not none else '' }}">
             –
@@ -64,12 +65,12 @@
       <tr><td colspan="6" class="muted">Δεν υπάρχουν ακόμα αγγελίες με αναγνωρισμένα specs.</td></tr>
     {% endfor %}
       <tr>
-        <td colspan="5"><span class="row" style="gap:6px">
+        <td colspan="5" class="c-full"><span class="row" style="gap:6px">
           <span class="small muted">Εύρος για άλλη παραλλαγή:</span>
           {% for k in p.spec_keys %}<select name="new_{{ k }}" aria-label="{{ SPEC_LABELS[k] }}"><option value="">{{ SPEC_LABELS[k] }}</option>
             {% for gb in size_options[k] %}<option value="{{ gb }}">{{ gb|gb }}</option>{% endfor %}</select>{% endfor %}
         </span></td>
-        <td><span class="row" style="gap:4px;flex-wrap:nowrap">
+        <td class="c-full"><span class="row" style="gap:4px;flex-wrap:nowrap">
           <input name="new_min" size="5" inputmode="decimal" placeholder="min"> – <input name="new_max" size="5" inputmode="decimal" placeholder="max">
         </span></td>
       </tr>
@@ -88,10 +89,16 @@
   <div class="small muted">Κουκκίδες: αγγελίες ανά site (οι αχνές δεν μετράνε στα stats· τα stats μετράνε μόνο πωλητές από τις επιτρεπόμενες χώρες). Γραμμή: κυλιόμενη διάμεση 7 ημερών, σκίαση: p25–p75.</div>
 </div>
 
-<h2>Αγγελίες ({{ rows|length }})</h2>
+<div class="row section-head">
+  <h2>Αγγελίες ({{ rows|length }})</h2>
+  <form method="get">
+    {% for k, v in request.query_params.multi_items() if k != 'sort' %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+    {{ sort_select(sort, skip=('product',)) }}
+  </form>
+</div>
 <div class="panel table-wrap">
-  <table>
-    <thead>{{ listing_head(show_product=False, actions=True) }}</thead>
+  <table class="cards listings">
+    <thead>{{ listing_head(show_product=False, actions=True, sort=sort) }}</thead>
     <tbody>{% for r in rows %}{{ listing_row(r, show_product=False, actions=True) }}{% else %}
       <tr><td colspan="7" class="muted pad">Καμία αγγελία σε αυτό το διάστημα.</td></tr>{% endfor %}</tbody>
   </table>

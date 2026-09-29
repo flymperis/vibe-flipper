@@ -2,7 +2,12 @@
 <html lang="el">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#171a21" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Vibe Flipper">
   <title>{% block title %}Vibe Flipper{% endblock %}</title>
   <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%235b5bd6'/><text x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'>VF</text></svg>">
@@ -12,24 +17,47 @@
 <header class="top">
   <a class="brand" href="/">Vibe <span>Flipper</span></a>
   {% set path = request.url.path %}
-  <nav>
-    <a href="/" class="{{ 'on' if path == '/' }}">Αγγελίες</a>
-    <a href="/products" class="{{ 'on' if path.startswith('/products') }}">Προϊόντα</a>
-    <a href="/price-changes" class="{{ 'on' if path == '/price-changes' }}">Αλλαγές τιμών</a>
-    <a href="/unmatched" class="{{ 'on' if path == '/unmatched' }}">Χωρίς αντιστοίχιση</a>
-    <a href="/settings" class="{{ 'on' if path == '/settings' }}">Ρυθμίσεις</a>
+  {% set nav = [
+    ('/', path == '/', 'Αγγελίες', 'Αγγελίες', '<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>'),
+    ('/products', path.startswith('/products'), 'Προϊόντα', 'Προϊόντα', '<path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8M12 13v8"/>'),
+    ('/price-changes', path == '/price-changes', 'Αλλαγές τιμών', 'Αλλαγές', '<path d="m22 17-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/>'),
+    ('/unmatched', path == '/unmatched', 'Χωρίς αντιστοίχιση', 'Χωρίς προϊόν', '<circle cx="12" cy="12" r="9.5"/><path d="M9.2 9a3 3 0 0 1 5.8 1c0 2-3 2.6-3 4.2M12 17.5h.01"/>'),
+    ('/settings', path == '/settings', 'Ρυθμίσεις', 'Ρυθμίσεις', '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>'),
+  ] %}
+  <nav class="top-nav">
+    {% for href, on, label, short, icon in nav %}<a href="{{ href }}" class="{{ 'on' if on }}" {% if on %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
   </nav>
   <div class="spacer"></div>
   <form method="post" action="/scrape" class="inline" id="scrape-form">
     <button type="submit" id="scrape-btn" {{ 'disabled' if running }}>
-      {% if running %}<span class="spinner"></span> Scraping…{% else %}↻ Refresh τώρα{% endif %}
+      {% if running %}<span class="spinner"></span> Scraping…{% else %}↻ Refresh<span class="d-only"> τώρα</span>{% endif %}
     </button>
   </form>
 </header>
 <main>
 {% block content %}{% endblock %}
 </main>
+<nav class="bottom-nav" aria-label="Μενού">
+  {% for href, on, label, short, icon in nav %}
+  <a href="{{ href }}" class="{{ 'on' if on }}" {% if on %}aria-current="page"{% endif %} aria-label="{{ label }}">
+    <svg viewBox="0 0 24 24" aria-hidden="true">{{ icon|safe }}</svg><span>{{ short }}</span></a>
+  {% endfor %}
+</nav>
 <script>
+// Filters form on a phone: show how many of the hidden filters are set, open it if the list is empty because of them.
+document.querySelectorAll('form.filters').forEach(form => {
+  const btn = form.querySelector('.filters-toggle');
+  if (!btn) return;
+  let n = 0;
+  form.querySelectorAll('.more select, .more input').forEach(el => {
+    if (el.type === 'hidden' || el.type === 'submit') return;
+    if (el.type === 'checkbox') { n += el.checked !== (el.dataset.default === 'true'); return; }
+    const def = el.dataset.default ?? (el.tagName === 'SELECT' ? el.options[0]?.value : '');
+    n += el.value !== def;
+  });
+  btn.querySelector('.filters-count').textContent = n ? ' · ' + n : '';
+  btn.classList.toggle('has', n > 0);
+});
 // Poll while a scrape runs, reload when it finishes.
 (function () {
   const btn = document.getElementById('scrape-btn');
