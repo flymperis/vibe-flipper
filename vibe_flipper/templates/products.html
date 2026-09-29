@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Προϊόντα · Vibe Flipper{% endblock %}
+{% block content %}
+<div class="row" style="justify-content:space-between;margin-bottom:12px">
+  <h1 style="margin:0">Προϊόντα</h1>
+  <a class="btn" href="/products/new">+ Νέο προϊόν</a>
+</div>
+<form class="panel filters" method="get">
+  <input type="search" name="q" value="{{ f.q }}" placeholder="Αναζήτηση προϊόντος…">
+  <select name="category" onchange="this.form.submit()"><option value="">Όλες οι κατηγορίες</option>
+    {% for c in categories %}<option {{ 'selected' if f.category == c }}>{{ c }}</option>{% endfor %}</select>
+  <button type="submit">Φίλτρο</button>
+  <span class="muted small">{{ products|length }} προϊόντα</span>
+</form>
+<div class="panel table-wrap">
+  <table>
+    <thead><tr><th title="Ενεργό: γίνεται αναζήτηση και matching"><input type="checkbox" id="check-all" aria-label="Επιλογή όλων"></th><th>Προϊόν</th><th>Κατηγορία</th><th class="num">Διάμεση</th><th class="num">Μέση</th>
+      <th class="num">Εύρος p25–p75</th><th class="num">Δείγματα</th><th class="num">Νέες 7ημ.</th><th>30 ημέρες</th><th class="num">Στόχος</th><th></th></tr></thead>
+    <tbody>
+    {% for p in products %}
+      <tr{% if not p.active %} class="inactive"{% endif %}>
+        <td><input type="hidden" form="active-form" name="ids" value="{{ p.id }}">
+            <input type="checkbox" class="active-box" form="active-form" name="active" value="{{ p.id }}" {{ 'checked' if p.active }} aria-label="Ενεργό: {{ p.name }}"></td>
+        <td><a href="/products/{{ p.id }}">{{ p.name }}</a>{% if not p.active %} <span class="badge">ανενεργό</span>{% endif %}
+          {% if p.variant_stats %} <span class="badge spec" title="{{ p.variant_stats.keys()|join(', ') }}">{{ p.variant_stats|length }} παραλλαγές</span>{% endif %}</td>
+        <td class="muted">{{ p.category }}</td>
+        <td class="num"><b>{{ p.market_median|eur }}</b></td>
+        <td class="num">{{ p.market_mean|eur }}</td>
+        <td class="num muted">{% if p.market_p25 %}{{ p.market_p25|eur }} – {{ p.market_p75|eur }}{% else %}–{% endif %}</td>
+        <td class="num">{{ p.sample_count }}{% if p.sample_count < 5 %} <span class="badge warn">λίγα</span>{% endif %}</td>
+        <td class="num">{{ week_counts.get(p.id, 0) }}</td>
+        <td>{{ sparks[p.id]|safe }}</td>
+        <td class="num muted">{{ '%.0f'|format(p.target_margin_pct) }}%</td>
+        <td><div class="actions">
+          <form method="post" action="/products/{{ p.id }}/delete" onsubmit="return confirm('Διαγραφή «{{ p.name }}»; Οι αγγελίες του θα μείνουν χωρίς αντιστοίχιση.')"><button class="ghost danger-text">Διαγραφή</button></form>
+        </div></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="11" class="muted pad">Δεν υπάρχουν προϊόντα.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<form id="active-form" method="post" action="/products/active"></form>
+<div class="save-bar" id="save-bar" hidden>
+  <span id="save-count"></span>
+  <span class="muted small">Τα ανενεργά προϊόντα δεν αναζητούνται και δεν αντιστοιχίζονται (δεν σβήνεται τίποτα).</span>
+  <button type="button" class="ghost" id="save-cancel">Ακύρωση</button>
+  <button type="submit" form="active-form">Αποθήκευση</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const boxes = [...document.querySelectorAll('.active-box')];
+  const bar = document.getElementById('save-bar'), count = document.getElementById('save-count');
+  const all = document.getElementById('check-all');
+  function refresh() {
+    const n = boxes.filter(b => b.checked !== b.defaultChecked).length;
+    bar.hidden = n === 0;
+    count.textContent = n + (n === 1 ? ' αλλαγή' : ' αλλαγές');
+    all.checked = boxes.length > 0 && boxes.every(b => b.checked);
+    all.indeterminate = !all.checked && boxes.some(b => b.checked);
+    boxes.forEach(b => b.closest('tr').classList.toggle('inactive', !b.checked));
+  }
+  boxes.forEach(b => b.addEventListener('change', refresh));
+  all.addEventListener('change', () => { boxes.forEach(b => { b.checked = all.checked; }); refresh(); });
+  document.getElementById('save-cancel').addEventListener('click', () => { boxes.forEach(b => { b.checked = b.defaultChecked; }); refresh(); });
+  window.addEventListener('beforeunload', e => { if (!bar.hidden && !document.activeElement?.form) { e.preventDefault(); } });
+  refresh();
+})();
+</script>
+{% endblock %}

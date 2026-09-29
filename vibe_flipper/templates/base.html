@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Vibe Flipper{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%235b5bd6'/><text x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'>VF</text></svg>">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">Vibe <span>Flipper</span></a>
+  {% set path = request.url.path %}
+  <nav>
+    <a href="/" class="{{ 'on' if path == '/' }}">Αγγελίες</a>
+    <a href="/products" class="{{ 'on' if path.startswith('/products') }}">Προϊόντα</a>
+    <a href="/unmatched" class="{{ 'on' if path == '/unmatched' }}">Χωρίς αντιστοίχιση</a>
+    <a href="/settings" class="{{ 'on' if path == '/settings' }}">Ρυθμίσεις</a>
+  </nav>
+  <div class="spacer"></div>
+  <form method="post" action="/scrape" class="inline" id="scrape-form">
+    <button type="submit" id="scrape-btn" {{ 'disabled' if running }}>
+      {% if running %}<span class="spinner"></span> Scraping…{% else %}↻ Refresh τώρα{% endif %}
+    </button>
+  </form>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+<script>
+// Poll while a scrape runs, reload when it finishes.
+(function () {
+  const btn = document.getElementById('scrape-btn');
+  let wasRunning = {{ 'true' if running else 'false' }};
+  document.getElementById('scrape-form').addEventListener('submit', () => { wasRunning = true; });
+  async function poll() {
+    try {
+      const r = await (await fetch('/status')).json();
+      if (r.running) {
+        btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Scraping…'; wasRunning = true;
+      } else if (wasRunning) { location.reload(); return; }
+    } catch (e) {}
+    setTimeout(poll, wasRunning ? 3000 : 30000);
+  }
+  setTimeout(poll, 3000);
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Ρυθμίσεις · Vibe Flipper{% endblock %}
+{% block content %}
+<h1>Ρυθμίσεις</h1>
+<div class="grid2">
+  <form class="panel pad" method="post" action="/settings">
+    <h2 style="margin-top:0">Sites</h2>
+    <div class="row" style="margin-bottom:6px">
+      {% for src in SOURCES %}
+      <label class="chk"><input type="checkbox" name="source_{{ src }}" {{ 'checked' if src in rs.sources }}>
+        <span class="badge src-{{ src }}">{{ src }}</span></label>
+      {% endfor %}
+    </div>
+    <p class="small muted">Ένα απενεργοποιημένο site δεν γίνεται scrape και οι αγγελίες του δεν μετράνε στα stats ούτε εμφανίζονται. Δεν σβήνεται τίποτα: αν το ξαναενεργοποιήσεις, επανέρχονται.</p>
+
+    <h2>Scraping & τιμές</h2>
+    <label class="field"><span>Scrape κάθε (λεπτά, min 5)</span><input type="number" min="5" name="scrape_interval_minutes" value="{{ rs.scrape_interval_minutes }}"></label>
+    <label class="field"><span>Παράθυρο στατιστικών (ημέρες)</span><input type="number" min="1" name="stats_window_days" value="{{ rs.stats_window_days }}"></label>
+    <label class="field"><span>Διατήρηση αγγελιών χωρίς προϊόν / εξωτερικού (ημέρες, 0 = για πάντα)</span><input type="number" min="0" name="retention_days" value="{{ rs.retention_days }}"></label>
+    <div class="row">
+      <label class="field"><span>Προμήθεια πώλησης %</span><input name="fee_pct" value="{{ rs.fee_pct }}" size="6"></label>
+      <label class="field"><span>Σταθερά έξοδα € (μεταφορικά κ.λπ.)</span><input name="fee_fixed" value="{{ rs.fee_fixed }}" size="6"></label>
+    </div>
+    <p class="small muted">Κέρδος = διάμεση × (1 − προμήθεια) − σταθερά έξοδα − κόστος αγοράς (στο Vinted μαζί με το buyer fee).</p>
+    <label class="field"><span>Χώρες πωλητών (ISO, με κόμμα· κενό = όλες)</span><input name="allowed_countries" value="{{ rs.allowed_countries }}" placeholder="GR"></label>
+    <p class="small muted">Insomnia/Vendora = Ελλάδα. Στο Vinted η χώρα βγαίνει από το προφίλ του πωλητή (μία φορά ανά πωλητή, ή αμέσως αν ο τίτλος είναι στα ελληνικά).
+      Αγγελίες εκτός των χωρών αυτών δεν μετράνε στα stats και κρύβονται (εκτός αν επιλέξεις «Και εξωτερικό»).</p>
+
+    <h2>Αντιστοίχιση (matching)</h2>
+    <label class="field"><span>Τρόπος</span>
+      <select name="matching_mode">
+        {% for m in modes %}<option value="{{ m }}" {{ 'selected' if rs.matching_mode == m }}>{{ {'rules': 'Μόνο κανόνες', 'llm': 'Μόνο LLM (Ollama)', 'hybrid': 'Hybrid: κανόνες + LLM για τα δύσκολα'}[m] }}</option>{% endfor %}
+      </select></label>
+    <label class="field"><span>Ollama URL</span><input name="ollama_url" value="{{ rs.ollama_url }}" placeholder="http://ollama:11434"></label>
+    <label class="field"><span>Μοντέλο</span><input name="ollama_model" value="{{ rs.ollama_model }}" placeholder="qwen2.5:7b"></label>
+    <p class="small">Κατάσταση Ollama:
+      {% if llm_status[0] is none %}<span class="muted">{{ llm_status[1] }}</span>
+      {% elif llm_status[0] %}<span class="pos">συνδεδεμένο ✓</span>
+      {% else %}<span class="neg">{{ llm_status[1] }}</span>{% endif %}</p>
+    <button type="submit">Αποθήκευση</button>
+  </form>
+
+  <div class="panel pad">
+    <h2 style="margin-top:0">Re-match</h2>
+    <p class="small muted">Ξανατρέχει την αντιστοίχιση σε όλες τις αγγελίες (εκτός των χειροκίνητων). Γίνεται αυτόματα όταν αλλάζεις ένα προϊόν.</p>
+    <div class="row">
+      <form method="post" action="/rematch"><button class="ghost">Re-match (κράτα τις απαντήσεις LLM)</button></form>
+      <form method="post" action="/rematch"><input type="hidden" name="reset_llm" value="true"><button class="ghost" title="Ξαναρωτάει το LLM, μέχρι το όριο κλήσεων ανά run">Re-match & ξαναρώτα το LLM</button></form>
+    </div>
+
+    <h2>Πλήρες scrape (αρχικό setup)</h2>
+    <p class="small muted">Διαβάζει <b>όλες</b> τις σελίδες του Insomnia (όλες οι κατηγορίες, ~19.000 αγγελίες, ~45–60 λεπτά).
+      Γίνεται αυτόματα στην πρώτη εκκίνηση με άδεια βάση· μετά κάθε run κρατά μόνο τα νέα (deltas).
+      Αποθηκεύει σελίδα-σελίδα, οπότε η πρόοδος φαίνεται στα «Τελευταία scrapes» και δεν χάνεται αν διακοπεί.</p>
+    <form method="post" action="/scrape/full" onsubmit="return confirm('Πλήρες scrape του Insomnia; Θα κρατήσει περίπου 45–60 λεπτά.')">
+      <button class="ghost" {{ 'disabled' if running }}>Πλήρες scrape Insomnia</button>
+    </form>
+
+    <h2>Καθάρισμα</h2>
+    <p class="small muted">Μία φορά την ημέρα σβήνονται αγγελίες χωρίς προϊόν ή από μη επιτρεπόμενες χώρες που δεν έχουμε ξαναδεί
+      εδώ και {{ rs.retention_days }} ημέρες. Οι αγγελίες με προϊόν (ιστορικό τιμών) και οι χειροκίνητες αντιστοιχίσεις δεν σβήνονται ποτέ.</p>
+    <form method="post" action="/purge" class="row">
+      <button class="ghost" {{ 'disabled' if not purgeable }}>Καθάρισμα τώρα</button>
+      <span class="small muted">{{ purgeable }} αγγελίες προς διαγραφή</span>
+    </form>
+
+    <h2>Vinted: χώρες πωλητών</h2>
+    <div class="row small">
+      {% for c, n in country_counts %}<span class="badge {{ '' if c in rs.countries else 'warn' }}">{{ c or 'άγνωστη' }}: {{ n }}</span>{% endfor %}
+    </div>
+    {% if pending_matched %}<p class="small muted">{{ pending_matched }} αγγελίες με προϊόν περιμένουν έλεγχο χώρας (γίνεται σταδιακά σε κάθε scrape).</p>{% endif %}
+
+    <h2>Τελευταία scrapes</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Site</th><th>Πότε</th><th class="num">Βρέθηκαν</th><th class="num">Νέες</th><th>Κατάσταση</th></tr></thead>
+        <tbody>
+        {% for r in runs %}
+          <tr>
+            <td><span class="badge src-{{ r.source }}">{{ r.source }}</span></td>
+            <td class="small">πριν {{ r.started_at|ago }}</td>
+            <td class="num">{{ r.found }}</td><td class="num">{{ r.new }}</td>
+            <td>{% if r.ok %}<span class="pos">OK</span>{% elif r.finished_at %}<span class="neg">Σφάλμα</span><pre class="err">{{ r.error }}</pre>{% else %}<span class="spinner"></span>{% endif %}</td>
+          </tr>
+        {% else %}<tr><td colspan="5" class="muted">Κανένα ακόμα.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

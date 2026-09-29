@@ -1,0 +1,18 @@
+# Works with `docker compose up -d` and `podman-compose up -d`.
+services:
+  vibe-flipper:
+    build: .
+    image: vibe-flipper:latest
+    container_name: vibe-flipper
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      - vibe-flipper-data:/data:Z
+    # If Ollama runs on the host (not in a container), this lets OLLAMA_URL=http://host.docker.internal:11434 work.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  vibe-flipper-data:

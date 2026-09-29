@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Νέο προϊόν · Vibe Flipper{% endblock %}
+{% block content %}
+<h1>Νέο προϊόν</h1>
+<form class="panel pad" method="post" action="/products/new">
+  {% include "_product_fields.html" %}
+  <button type="submit">Δημιουργία</button>
+</form>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pager with context %}
+{% block title %}Χωρίς αντιστοίχιση · Vibe Flipper{% endblock %}
+{% block content %}
+<h1>Χωρίς αντιστοίχιση <span class="muted small">{{ total }}</span></h1>
+<form class="panel filters" method="get">
+  <input type="search" name="q" value="{{ f.q }}" placeholder="Αναζήτηση τίτλου…">
+  <select name="source"><option value="">Όλα τα sites</option>
+    {% for s in enabled_sources %}<option {{ 'selected' if f.source == s }}>{{ s }}</option>{% endfor %}</select>
+  <select name="days">{% for d in [3, 7, 14, 30, 90] %}<option value="{{ d }}" {{ 'selected' if f.days == d }}>{{ d }} μέρες</option>{% endfor %}</select>
+  <label class="chk"><input type="checkbox" name="show_rejected" value="true" {{ 'checked' if f.show_rejected }}> Δείξε και όσα απορρίφθηκαν (τιμή / αξεσουάρ)</label>
+  <button type="submit">Φίλτρο</button>
+</form>
+<div class="panel table-wrap">
+  <table>
+    <thead><tr><th></th><th>Αγγελία</th><th class="num">Τιμή</th><th>Σημείωση</th><th>Αντιστοίχιση</th></tr></thead>
+    <tbody>
+    {% for l in listings %}
+      <tr>
+        <td>{% if l.image_url %}<img class="thumb" src="{{ l.image_url }}" loading="lazy" alt="">{% else %}<div class="thumb"></div>{% endif %}</td>
+        <td class="title"><a href="{{ l.url }}" target="_blank" rel="noopener">{{ l.title }}</a>
+          <div class="row small muted" style="gap:6px"><span class="badge src-{{ l.source }}">{{ l.source }}</span>
+            {% if l.is_wanted_ad %}<span class="badge bad">ζητείται</span>{% endif %}
+            <span>πριν {{ l.first_seen|ago }}</span></div></td>
+        <td class="num">{{ l.price|eur }}</td>
+        <td class="small muted">{{ l.match_note or '' }}</td>
+        <td>
+          <div class="actions">
+            <form method="post" action="/listings/{{ l.id }}/assign" class="row" style="gap:4px">
+              <select name="product_id" style="max-width:190px">
+                <option value="">— δεν είναι προϊόν —</option>
+                {% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+              </select>
+              <button>OK</button>
+            </form>
+            <a class="btn ghost small" href="/products/new?title={{ l.title|urlencode }}" title="Νέο προϊόν από αυτόν τον τίτλο">+ Προϊόν</a>
+          </div>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="muted pad">Όλα αντιστοιχισμένα 🎉</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{{ pager(page, pages) }}
+{% endblock %}

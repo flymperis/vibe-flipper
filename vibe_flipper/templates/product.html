@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% from "_macros.html" import listing_row, listing_head with context %}
+{% block title %}{{ p.name }} · Vibe Flipper{% endblock %}
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="row" style="justify-content:space-between">
+  <h1 style="margin:0">{{ p.name }} <span class="muted small">{{ p.category }}</span></h1>
+  <form method="get" class="row">
+    {% if p.spec_keys %}
+    <select name="variant" onchange="this.form.submit()">
+      <option value="">Όλες οι παραλλαγές</option>
+      {% for v, st in variants %}<option value="{{ v }}" {{ 'selected' if variant == v }}>{{ v }} ({{ st.count }})</option>{% endfor %}
+      <option value="?" {{ 'selected' if variant == '?' }}>Χωρίς specs ({{ unknown_variant }})</option>
+    </select>
+    {% endif %}
+    <select name="days" onchange="this.form.submit()">{% for d in [14, 30, 90, 180, 365] %}<option value="{{ d }}" {{ 'selected' if days == d }}>{{ d }} μέρες</option>{% endfor %}</select>
+    <label class="chk"><input type="checkbox" name="foreign" value="true" {{ 'checked' if foreign }} onchange="this.form.submit()"> Και εξωτερικό</label>
+  </form>
+</div>
+
+<div class="stats" style="margin-top:14px">
+  <div class="panel stat"><div class="v">{{ p.market_median|eur }}</div><div class="k">διάμεση τιμή (αγοραία)</div></div>
+  <div class="panel stat"><div class="v">{{ p.market_mean|eur }}</div><div class="k">μέση τιμή (χωρίς outliers)</div></div>
+  <div class="panel stat"><div class="v">{% if p.market_p25 %}{{ p.market_p25|eur }} – {{ p.market_p75|eur }}{% else %}–{% endif %}</div><div class="k">εύρος p25–p75</div></div>
+  <div class="panel stat"><div class="v">{{ p.sample_count }}</div><div class="k">δείγματα{% if p.sample_count < min_samples %} · <span class="neg">λίγα</span>{% endif %}</div></div>
+</div>
+
+{% if p.spec_keys %}
+<h2>Τιμές ανά παραλλαγή <span class="muted small">({% for k in p.spec_keys %}{{ SPEC_LABELS[k] }}{{ ' + ' if not loop.last }}{% endfor %})</span></h2>
+<div class="panel table-wrap" style="margin-bottom:14px">
+  <table>
+    <thead><tr><th>Παραλλαγή</th><th class="num">Διάμεση</th><th class="num">Μέση</th><th class="num">Εύρος p25–p75</th><th class="num">Δείγματα</th><th></th></tr></thead>
+    <tbody>
+    {% for v, st in variants %}
+      <tr>
+        <td><a href="?variant={{ v|urlencode }}&days={{ days }}"><span class="badge spec">{{ v }}</span></a></td>
+        <td class="num"><b>{{ st.median|eur }}</b></td>
+        <td class="num">{{ st.mean|eur }}</td>
+        <td class="num muted">{{ st.p25|eur }} – {{ st.p75|eur }}</td>
+        <td class="num">{{ st.count }}</td>
+        <td>{% if st.count < min_variant_samples %}<span class="badge warn" title="Λιγότερα από {{ min_variant_samples }} δείγματα: οι αγγελίες του συγκρίνονται με τη φθηνότερη παραλλαγή">λίγα</span>{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="muted">Δεν υπάρχουν ακόμα αγγελίες με αναγνωρισμένα specs.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="small muted pad" style="padding-top:6px">{{ unknown_variant }} αγγελίες χωρίς specs στον τίτλο/περιγραφή: συγκρίνονται συντηρητικά με τη φθηνότερη παραλλαγή (≥).</div>
+</div>
+{% endif %}
+
+<div class="panel pad">
+  <div class="chart-box"><canvas id="chart"></canvas></div>
+  <div class="small muted">Κουκκίδες: αγγελίες ανά site (οι αχνές δεν μετράνε στα stats· τα stats μετράνε μόνο πωλητές από τις επιτρεπόμενες χώρες). Γραμμή: κυλιόμενη διάμεση 7 ημερών, σκίαση: p25–p75.</div>
+</div>
+
+<h2>Αγγελίες ({{ rows|length }})</h2>
+<div class="panel table-wrap">
+  <table>
+    <thead>{{ listing_head(show_product=False, actions=True) }}</thead>
+    <tbody>{% for r in rows %}{{ listing_row(r, show_product=False, actions=True) }}{% else %}
+      <tr><td colspan="7" class="muted pad">Καμία αγγελία σε αυτό το διάστημα.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+
+<h2>Ρυθμίσεις αντιστοίχισης</h2>
+<form class="panel pad" method="post" action="/products/{{ p.id }}">
+  {% include "_product_fields.html" %}
+  <div class="row"><button type="submit">Αποθήκευση & re-match</button></div>
+</form>
+<form method="post" action="/products/{{ p.id }}/delete" onsubmit="return confirm('Διαγραφή προϊόντος; Οι αγγελίες του θα μείνουν χωρίς αντιστοίχιση.')" style="margin-top:10px">
+  <button class="danger">Διαγραφή προϊόντος</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function () {
+  const css = getComputedStyle(document.documentElement);
+  const c = n => css.getPropertyValue(n).trim();
+  const data = await (await fetch('/api/products/{{ p.id }}/chart?days={{ days }}&variant={{ variant|urlencode }}&foreign={{ 'true' if foreign else 'false' }}')).json();
+  const colors = { insomnia: c('--insomnia'), vendora: c('--vendora'), vinted: c('--vinted') };
+  const bySource = {};
+  for (const pt of data.points) (bySource[pt.source] ||= []).push(pt);
+  const scatter = Object.entries(bySource).map(([src, pts]) => ({
+    type: 'scatter', label: src, data: pts,
+    backgroundColor: pts.map(p => colors[src] + (p.used ? 'cc' : '33')),
+    borderColor: 'transparent', pointRadius: 4, pointHoverRadius: 6, order: 1,
+  }));
+  const s = data.series;
+  const line = (key, extra) => ({ type: 'line', data: s.map(d => ({ x: d.date, y: d[key] })), pointRadius: 0, tension: .3, order: 2, ...extra });
+  const accent = c('--accent');
+  new Chart(document.getElementById('chart'), {
+    data: { datasets: [
+      line('p75', { label: 'p75', borderWidth: 0, backgroundColor: accent + '22', fill: '+1' }),
+      line('p25', { label: 'p25', borderWidth: 0, backgroundColor: accent + '22', fill: false }),
+      line('median', { label: 'διάμεση 7ημ.', borderColor: accent, borderWidth: 2.5 }),
+      ...scatter,
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false, parsing: { xAxisKey: 'x', yAxisKey: 'y' },
+      scales: {
+        x: { type: 'time', time: { unit: 'day', tooltipFormat: 'dd/MM HH:mm' }, grid: { color: c('--line') }, ticks: { color: c('--muted') } },
+        y: { grid: { color: c('--line') }, ticks: { color: c('--muted'), callback: v => v + ' €' } },
+      },
+      plugins: {
+        legend: { labels: { color: c('--text'), filter: i => !['p25', 'p75'].includes(i.text) } },
+        tooltip: { callbacks: { label: ctx => (ctx.raw.title ? ctx.raw.title.slice(0, 60) + (ctx.raw.variant ? ' [' + ctx.raw.variant + ']' : '') + ' — ' : ctx.dataset.label + ': ') + ctx.raw.y + ' €' } },
+      },
+      onClick: (e, els) => { const el = els[0]; if (el) { const pt = el.element.$context.raw; if (pt.url) window.open(pt.url, '_blank'); } },
+    },
+  });
+})();
+</script>
+{% endblock %}

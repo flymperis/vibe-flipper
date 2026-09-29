@@ -1,0 +1,30 @@
+<div class="grid2">
+  <label class="field"><span>Όνομα</span><input name="name" value="{{ p.name }}" required></label>
+  <label class="field"><span>Κατηγορία</span>
+    <input name="category" value="{{ p.category }}" list="cats"><datalist id="cats">{% for c in categories %}<option value="{{ c }}">{% endfor %}</datalist></label>
+  <label class="field"><span>Include keywords (ένα ανά γραμμή· αρκεί ένα)</span>
+    <textarea name="include_keywords">{{ (p.include_keywords or [])|join('\n') }}</textarea></label>
+  <label class="field"><span>Exclude keywords (κανένα δεν πρέπει να υπάρχει· <code>λέξη*</code> = πρόθεμα)</span>
+    <textarea name="exclude_keywords">{{ (p.exclude_keywords or [])|join('\n') }}</textarea></label>
+  <label class="field"><span>Regex (προαιρετικό, στον normalized τίτλο)</span><input name="regex" value="{{ p.regex or '' }}"></label>
+  <label class="field"><span>Search queries για Vendora / Vinted (ένα ανά γραμμή)</span>
+    <textarea name="search_queries" style="min-height:40px">{{ (p.search_queries or [])|join('\n') }}</textarea></label>
+  <div class="row">
+    <label class="field"><span>Min τιμή €</span><input name="min_price" value="{{ p.min_price if p.min_price is not none else '' }}" size="7"></label>
+    <label class="field"><span>Max τιμή €</span><input name="max_price" value="{{ p.max_price if p.max_price is not none else '' }}" size="7"></label>
+    <label class="field"><span>Στόχος περιθωρίου %</span><input name="target_margin_pct" value="{{ '%g'|format(p.target_margin_pct or 20) }}" size="5"></label>
+  </div>
+  <div class="field"><span>Παραλλαγές τιμής ανά spec (π.χ. MacBook: RAM + αποθήκευση, iPhone: αποθήκευση, GPU: RAM = VRAM)</span>
+    <div class="row">{% for k in SPEC_KEYS %}
+      <label class="chk"><input type="checkbox" name="spec_{{ k }}" {{ 'checked' if k in (p.spec_keys or []) }}> {{ SPEC_LABELS[k] }}</label>{% endfor %}
+    </div></div>
+  <div class="field"><span>Μόνο αν το spec της αγγελίας είναι (GB, 1TB = 1024· π.χ. «SSD 1TB» → Αποθήκευση 1024)</span>
+    <div class="row">{% for k in SPEC_KEYS %}
+      <label class="chk">{{ SPEC_LABELS[k] }} = <input name="require_{{ k }}" size="6" inputmode="numeric"
+        value="{{ (p.spec_filter or {}).get(k, '') }}"></label>{% endfor %}
+    </div></div>
+  <div class="row"><label class="chk"><input type="checkbox" name="active" {{ 'checked' if p.active }}> Ενεργό</label></div>
+</div>
+<p class="small muted">Ο τίτλος γίνεται normalized πριν το matching: πεζά, χωρίς τόνους, σημεία στίξης → κενά,
+γράμματα/αριθμοί χωριστά (<code>ps5</code> → <code>ps 5</code>, <code>rtx3070ti</code> → <code>rtx 3070 ti</code>, <code>m1</code> → <code>m 1</code>, <code>5800X3D</code> → <code>5800 x 3 d</code>).
+Τιμή εκτός min/max = θεωρείται αξεσουάρ ή άλλο προϊόν.</p>

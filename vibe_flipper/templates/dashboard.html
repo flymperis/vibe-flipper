@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "_macros.html" import listing_row, listing_head, pager with context %}
+{% block content %}
+<section class="tiles" aria-label="Κατηγορίες">
+  <a class="tile tile-all {{ 'on' if not f.category }}" href="/?{{ tile_qs }}">
+    <span class="tile-icon">✨</span>
+    <span class="tile-name">Όλα</span>
+    <span class="tile-meta">{{ all_tile.count }} αγγελίες{% if all_tile.deals %} · <b class="pos">{{ all_tile.deals }} deals</b>{% endif %}</span>
+  </a>
+  <div class="tile-grid">
+    {% for t in tiles %}
+    <a class="tile {{ 'on' if f.category == t.name }} {{ 'empty' if not t.count }}" href="/?{{ tile_qs }}{{ '&' if tile_qs }}category={{ t.name|urlencode }}">
+      <span class="tile-icon">{{ t.icon }}</span>
+      <span class="tile-name">{{ t.name }}</span>
+      <span class="tile-meta">{{ t.count }}{% if t.deals %} · <b class="pos">{{ t.deals }} deals</b>{% endif %}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="status-strip small muted">
+  <span>{{ counts.listings }} αγγελίες συνολικά</span> ·
+  <span>{{ counts.matched }} με προϊόν</span> ·
+  <span>{{ counts.today }} νέες σε 24ω</span>
+  {% for r in last_runs %} · <span class="badge src-{{ r.source }}">{{ r.source }}</span>
+    {% if r.ok %}+{{ r.new }} πριν {{ r.finished_at|ago }}{% elif r.finished_at %}<span class="neg">σφάλμα</span>{% else %}τρέχει…{% endif %}
+  {% endfor %}
+</div>
+
+<form class="panel filters" method="get">
+  <input type="search" name="q" value="{{ f.q }}" placeholder="Αναζήτηση τίτλου…">
+  <select name="source"><option value="">Όλα τα sites</option>
+    {% for s in enabled_sources %}<option {{ 'selected' if f.source == s }}>{{ s }}</option>{% endfor %}</select>
+  <input type="hidden" name="category" value="{{ f.category }}">
+  <select name="product_id" onchange="this.form.submit()"><option value="">{{ 'Όλα τα προϊόντα' if not f.category else 'Όλα: ' ~ f.category }}</option>
+    {% for p in products %}<option value="{{ p.id }}" {{ 'selected' if f.product_id == p.id|string }}>{{ p.name }}</option>{% endfor %}</select>
+  <select name="matched">
+    <option value="matched" {{ 'selected' if f.matched == 'matched' }}>Μόνο με προϊόν</option>
+    <option value="all" {{ 'selected' if f.matched == 'all' }}>Όλες</option>
+    <option value="unmatched" {{ 'selected' if f.matched == 'unmatched' }}>Χωρίς προϊόν</option>
+  </select>
+  <select name="days">{% for d in [1, 3, 7, 14, 30, 90] %}<option value="{{ d }}" {{ 'selected' if f.days == d }}>{{ d }} {{ 'μέρα' if d == 1 else 'μέρες' }}</option>{% endfor %}</select>
+  <select name="sort">
+    <option value="new" {{ 'selected' if f.sort == 'new' }}>Νεότερες</option>
+    <option value="margin" {{ 'selected' if f.sort == 'margin' }}>Περιθώριο %</option>
+    <option value="profit" {{ 'selected' if f.sort == 'profit' }}>Κέρδος €</option>
+  </select>
+  <label class="chk"><input type="checkbox" name="deals" value="true" {{ 'checked' if f.deals }}> Μόνο deals</label>
+  {% if countries %}<label class="chk" title="Δείχνονται μόνο πωλητές από: {{ countries|join(', ') }}"><input type="checkbox" name="foreign" value="true" {{ 'checked' if f.foreign }}> Και εξωτερικό</label>{% endif %}
+  <button type="submit">Φίλτρο</button>
+  <span class="muted small">{{ total }} αποτελέσματα</span>
+</form>
+
+<div class="panel table-wrap">
+  <table>
+    <thead>{{ listing_head() }}</thead>
+    <tbody>
+      {% for r in rows %}{{ listing_row(r) }}{% else %}
+      <tr><td colspan="7" class="muted pad">Καμία αγγελία. Πάτα «Refresh τώρα» ή άλλαξε τα φίλτρα.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{{ pager(page, pages) }}
+{% endblock %}
