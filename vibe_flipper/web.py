@@ -4,7 +4,7 @@ from datetime import timedelta
 from pathlib import Path
 from urllib.parse import quote, unquote, urlencode
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -196,11 +196,12 @@ def _category_tiles(rows: list[dict], categories: list[str]) -> list[dict]:
 
 
 @router.get("/", response_class=HTMLResponse)
-def dashboard(request: Request, source: str = "", category: str = "", product_id: str = "",
+def dashboard(request: Request, source: str = "", category: list[str] = Query([]), product_id: str = "",
               deals: bool = False, sort: str = "new", q: str = "", days: int = 7,
               matched: str = "matched", foreign: bool = False, page: int = 1, s: Session = Depends(get_session)):
     if redirect := _restore_filters(request, "f_dash"):
         return redirect
+    cats = [c for c in dict.fromkeys(category) if c]  # selected category tiles (none = all)
     base = _visible_listings(s.query(Listing).options(joinedload(Listing.product))
                              .filter(Listing.first_seen >= utcnow() - timedelta(days=days)))
     if not foreign:
@@ -219,10 +220,10 @@ def dashboard(request: Request, source: str = "", category: str = "", product_id
     all_tile = {"count": len(matched_rows),
                 "deals": sum(1 for r in matched_rows if r["profit"] and r["profit"].is_deal)}
 
-    if matched == "matched" or category or product_id.isdigit():
+    if matched == "matched" or cats or product_id.isdigit():
         rows = matched_rows
-        if category:
-            rows = [r for r in rows if r["p"].category == category]
+        if cats:
+            rows = [r for r in rows if r["p"].category in cats]
         if product_id.isdigit():
             rows = [r for r in rows if r["p"].id == int(product_id)]
     else:
@@ -244,15 +245,24 @@ def dashboard(request: Request, source: str = "", category: str = "", product_id
         "matched": s.query(func.count(Listing.id)).filter(Listing.product_id.isnot(None)).scalar(),
         "today": s.query(func.count(Listing.id)).filter(Listing.first_seen >= utcnow() - timedelta(days=1)).scalar(),
     }
-    f = {"source": source, "category": category, "product_id": product_id, "deals": deals,
+    f = {"source": source, "category": cats, "product_id": product_id, "deals": deals,
          "sort": sort, "q": q, "days": days, "matched": matched, "foreign": foreign}
-    cat_products = sorted((p for p in products if p.active and (not category or p.category == category)),
+    cat_products = sorted((p for p in products if p.active and (not cats or p.category in cats)),
                           key=lambda p: natural_key(p.name))
     resp = _render(request, "dashboard.html", rows=rows, total=total, page=page, pages=max(1, -(-total // PAGE_SIZE)),
                    products=cat_products, categories=categories, last_runs=last_runs, counts=counts, f=f,
                    tiles=tiles, all_tile=all_tile, countries=runtime_settings.load(s).countries,
-                   tile_qs=_tile_qs(f))
+                   tile_qs=_tile_qs(f), tile_href=lambda name: _tile_href(_tile_qs(f), cats, name))
     return _remember_filters(request, resp, "f_dash")
+
+
+def _tile_href(qs: str, selected: list[str], name: str) -> str:
+    """Link of a category tile: toggles `name` in the selected categories and keeps
+    the other filters. `qs` is never empty (days/sort), so "/" + saved filters is
+    not restored by mistake when the last tile is switched off."""
+    cats = [c for c in selected if c != name] if name in selected else [*selected, name]
+    return "/?" + "&".join([qs, *(urlencode({"category": c}) for c in cats)] if qs else
+                           [urlencode({"category": c}) for c in cats])
 
 
 def _tile_qs(f: dict) -> str:

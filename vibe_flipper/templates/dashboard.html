@@ -9,7 +9,9 @@
   </a>
   <div class="tile-grid">
     {% for t in tiles %}
-    <a class="tile {{ 'on' if f.category == t.name }} {{ 'empty' if not t.count }}" href="/?{{ tile_qs }}{{ '&' if tile_qs }}category={{ t.name|urlencode }}">
+    {% set on = t.name in f.category %}
+    <a class="tile {{ 'on' if on }} {{ 'empty' if not t.count }}" href="{{ tile_href(t.name) }}" aria-pressed="{{ 'true' if on else 'false' }}"
+       title="{{ 'Κλικ για αποεπιλογή' if on else 'Κλικ για επιλογή (μπορείς να διαλέξεις πολλές)' }}">
       <span class="tile-icon">{{ t.icon }}</span>
       <span class="tile-name">{{ t.name }}</span>
       <span class="tile-meta">{{ t.count }}{% if t.deals %} · <b class="pos">{{ t.deals }} deals</b>{% endif %}</span>
@@ -31,8 +33,8 @@
   <input type="search" name="q" value="{{ f.q }}" placeholder="Αναζήτηση τίτλου…">
   <select name="source"><option value="">Όλα τα sites</option>
     {% for s in enabled_sources %}<option {{ 'selected' if f.source == s }}>{{ s }}</option>{% endfor %}</select>
-  <input type="hidden" name="category" value="{{ f.category }}">
-  <select name="product_id" onchange="this.form.submit()"><option value="">{{ 'Όλα τα προϊόντα' if not f.category else 'Όλα: ' ~ f.category }}</option>
+  {% for c in f.category %}<input type="hidden" name="category" value="{{ c }}">{% endfor %}
+  <select name="product_id" onchange="this.form.submit()"><option value="">{{ 'Όλα τα προϊόντα' if not f.category else 'Όλα: ' ~ f.category|join(', ') }}</option>
     {% for p in products %}<option value="{{ p.id }}" {{ 'selected' if f.product_id == p.id|string }}>{{ p.name }}</option>{% endfor %}</select>
   <select name="matched">
     <option value="matched" {{ 'selected' if f.matched == 'matched' }}>Μόνο με προϊόν</option>

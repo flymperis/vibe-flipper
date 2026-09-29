@@ -64,3 +64,12 @@ def test_filters_are_remembered_without_page():
     assert "f_dash=" in resp.headers["set-cookie"] and "page" not in resp.headers["set-cookie"]
     resp = _remember_filters(_request("reset=1"), Response(), "f_dash")
     assert 'f_dash=""' in resp.headers["set-cookie"] or "Max-Age=0" in resp.headers["set-cookie"]
+
+
+def test_category_tiles_toggle():
+    from vibe_flipper.web import _tile_href
+    qs = "sort=new&days=7"
+    assert _tile_href(qs, [], "GPU") == "/?sort=new&days=7&category=GPU"                 # select
+    assert _tile_href(qs, ["GPU"], "CPU") == "/?sort=new&days=7&category=GPU&category=CPU"  # add
+    assert _tile_href(qs, ["GPU", "CPU"], "GPU") == "/?sort=new&days=7&category=CPU"      # deselect
+    assert _tile_href(qs, ["GPU"], "GPU") == "/?sort=new&days=7"                          # back to all
