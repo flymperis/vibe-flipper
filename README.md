@@ -5,6 +5,7 @@
 ## Εκκίνηση (Docker / Podman)
 
 ```bash
+git clone https://github.com/flymperis/vibe-flipper.git && cd vibe-flipper
 cp .env.example .env        # βάλε OLLAMA_URL αν θες LLM matching
 podman-compose up -d --build   # ή: docker compose up -d --build
 ```
