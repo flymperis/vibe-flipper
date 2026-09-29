@@ -7,6 +7,9 @@ from .config import get_settings
 from .models import Setting
 
 MATCHING_MODES = ("rules", "llm", "hybrid")
+# Left empty in the UI -> use the .env value (e.g. OLLAMA_URL added to .env after
+# the settings page was first saved with an empty URL).
+ENV_IF_EMPTY = {"ollama_url", "ollama_model"}
 
 
 @dataclass
@@ -44,7 +47,7 @@ def load(session: Session) -> RuntimeSettings:
     for f in fields(RuntimeSettings):
         raw = stored.get(f.name)
         default = getattr(env, f.name)
-        if raw is None:
+        if raw is None or (raw.strip() == "" and f.name in ENV_IF_EMPTY):
             values[f.name] = default
         else:
             try:

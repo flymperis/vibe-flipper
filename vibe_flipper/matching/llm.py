@@ -91,7 +91,9 @@ class OllamaClassifier:
             "model": self.model,
             "stream": False,
             "format": SCHEMA,
-            "options": {"temperature": 0},
+            "think": False,  # qwen3.x: answer straight away, no reasoning tokens
+            # the whole product catalog goes into the prompt: keep it inside the context window
+            "options": {"temperature": 0, "num_ctx": 8192},
             "messages": [
                 {"role": "system", "content": SYSTEM},
                 {"role": "user", "content": f"Products:\n{catalog}\n\nListing:\n{listing}"},
