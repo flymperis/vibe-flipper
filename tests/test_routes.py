@@ -28,6 +28,7 @@ def resolve(method: str, path: str) -> str:
     ("POST", "/purge", "purge_now"),
     ("POST", "/scrape/full", "scrape_full"),
     ("POST", "/scrape", "scrape_now"),
+    ("GET", "/price-changes", "price_changes_page"),
 ])
 def test_routes_resolve(method, path, endpoint):
     assert resolve(method, path) == endpoint

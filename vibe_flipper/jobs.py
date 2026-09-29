@@ -126,8 +126,9 @@ def search_queries(session: Session) -> list[str]:
     return list(seen.values())
 
 
-def upsert(session: Session, raw: RawListing) -> tuple[Listing, bool, bool]:
-    """Returns (listing, is_new, price_changed)."""
+def upsert(session: Session, raw: RawListing) -> tuple[Listing, bool, bool, bool]:
+    """Returns (listing, is_new, changed, price_changed); `changed` = price or title
+    changed (needs re-matching). Every new price is kept in listing_prices."""
     now = utcnow()
     listing = session.query(Listing).filter_by(source=raw.source, external_id=raw.external_id).one_or_none()
     if listing is None:
@@ -141,7 +142,7 @@ def upsert(session: Session, raw: RawListing) -> tuple[Listing, bool, bool]:
         session.add(listing)
         if raw.price is not None:
             listing.prices.append(ListingPrice(price=raw.price, seen_at=now))
-        return listing, True, False
+        return listing, True, False, False
 
     listing.last_seen = now
     listing.is_active = True
@@ -149,8 +150,9 @@ def upsert(session: Session, raw: RawListing) -> tuple[Listing, bool, bool]:
     listing.description = listing.description or raw.description
     listing.posted_at = listing.posted_at or raw.posted_at
     listing.raw_condition = listing.raw_condition or raw.raw_condition
-    changed = raw.price is not None and raw.price != listing.price
-    if changed:
+    price_changed = raw.price is not None and raw.price != listing.price
+    changed = price_changed
+    if price_changed:
         listing.price = raw.price
         listing.buy_cost = raw.buy_cost
         listing.prices.append(ListingPrice(price=raw.price, seen_at=now))
@@ -158,7 +160,7 @@ def upsert(session: Session, raw: RawListing) -> tuple[Listing, bool, bool]:
         listing.title = raw.title[:500]
         listing.llm_checked = False
         changed = True
-    return listing, False, changed
+    return listing, False, changed, price_changed
 
 
 def run_scrape(sources: list[str] | None = None, mode: str | None = None) -> bool:
@@ -215,7 +217,7 @@ def _run_scrape(sources: list[str], forced_mode: str | None = None) -> None:
                 s.flush()
                 run_id = run.id
             log.info("%s: scraping (%s)", name, mode)
-            found = new = 0
+            found = new = repriced = 0
             to_match: list[int] = []
             try:
                 # store page by page: survives interruptions, shows progress, and lets DELTA
@@ -223,18 +225,19 @@ def _run_scrape(sources: list[str], forced_mode: str | None = None) -> None:
                 for page in cls(client, known=_known_ids(name)).pages(queries, mode):
                     with session_scope() as s:
                         for raw in page:
-                            listing, is_new, changed = upsert(s, raw)
+                            listing, is_new, changed, price_changed = upsert(s, raw)
                             s.flush()
                             if is_new or changed:
                                 to_match.append(listing.id)
                             new += is_new
+                            repriced += price_changed
                         found += len(page)
                         run = s.get(ScrapeRun, run_id)
-                        run.found, run.new = found, new
+                        run.found, run.new, run.price_changes = found, new, repriced
                 with session_scope() as s:
                     run = s.get(ScrapeRun, run_id)
                     run.ok, run.finished_at = True, utcnow()
-                log.info("%s: %d listings seen, %d new (%s)", name, found, new, mode)
+                log.info("%s: %d listings seen, %d new, %d price changes (%s)", name, found, new, repriced, mode)
             except Exception as e:  # noqa: BLE001 — one broken source must not stop the others
                 log.exception("scraper %s failed", name)
                 with session_scope() as s:

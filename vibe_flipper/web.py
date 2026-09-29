@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
-from . import jobs, pricing, runtime_settings
+from . import changes, jobs, pricing, runtime_settings
 from .config import get_settings
 from .db import get_session
 from .matching.llm import OllamaClassifier
@@ -73,7 +73,25 @@ def sparkline(points: list[float], w=110, h=26) -> str:
             f'<polyline points="{coords}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>')
 
 
+try:
+    from zoneinfo import ZoneInfo
+    LOCAL_TZ = ZoneInfo("Europe/Athens")
+except Exception:  # noqa: BLE001 — no tz database: show UTC
+    LOCAL_TZ = None
+
+
+def local_dt(dt, fmt="%d/%m %H:%M"):
+    """Stored datetimes are naive UTC; show them in Greek time."""
+    if dt is None:
+        return ""
+    if LOCAL_TZ is not None:
+        from datetime import timezone
+        dt = dt.replace(tzinfo=timezone.utc).astimezone(LOCAL_TZ)
+    return dt.strftime(fmt)
+
+
 templates.env.filters["eur"] = eur
+templates.env.filters["local_dt"] = local_dt
 templates.env.filters["ago"] = ago
 templates.env.globals["SOURCES"] = SOURCES
 # cache-busting for static files: /static/style.css?v=<mtime>
@@ -96,6 +114,15 @@ def _rows(session: Session, listings: list[Listing]) -> list[dict]:
     min_samples = get_settings().min_samples
     return [{"l": l, "p": l.product, "profit": pricing.listing_profit(l, l.product, rs.fee_pct, rs.fee_fixed, min_samples)}
             for l in listings]
+
+
+def _add_was(s: Session, rows: list[dict]) -> list[dict]:
+    """Attach the original price to rows whose price changed since first seen."""
+    first = changes.first_prices(s, [r["l"].id for r in rows])
+    for r in rows:
+        was = first.get(r["l"].id)
+        r["was"] = was if was is not None and was != r["l"].price else None
+    return rows
 
 
 def _background(fn, *args, session: Session | None = None, **kwargs):
@@ -209,7 +236,7 @@ def dashboard(request: Request, source: str = "", category: str = "", product_id
         rows = sorted(rows, key=lambda r: (not (r["l"].is_broken or r["l"].is_wanted_ad) and r["profit"] is not None,
                                            getattr(r["profit"], key) if r["profit"] else 0), reverse=True)
     total = len(rows)
-    rows = rows[(page - 1) * PAGE_SIZE: page * PAGE_SIZE]
+    rows = _add_was(s, rows[(page - 1) * PAGE_SIZE: page * PAGE_SIZE])
 
     last_runs = s.query(ScrapeRun).order_by(ScrapeRun.id.desc()).limit(len(SOURCES)).all()
     counts = {
@@ -344,7 +371,8 @@ def product_detail(request: Request, pid: int, days: int = 90, variant: str = ""
     variants = variant_table(p)
     unknown = (s.query(func.count(Listing.id)).filter(Listing.product_id == pid, Listing.variant.is_(None)).scalar()
                if p.spec_keys else 0)
-    return _render(request, "product.html", p=p, rows=_rows(s, listings), days=days, categories=categories,
+    return _render(request, "product.html", p=p, rows=_add_was(s, _rows(s, listings)), days=days,
+                   categories=categories,
                    min_samples=get_settings().min_samples, variants=variants, variant=variant,
                    selected=next((v for v in variants if v["label"] == variant), None),
                    unknown_variant=unknown, min_variant_samples=pricing.MIN_VARIANT_SAMPLES, foreign=foreign,
@@ -433,6 +461,74 @@ def product_chart(pid: int, days: int = 90, variant: str = "", foreign: bool = F
                "variant": l.variant,
                "url": l.url, "used": l.counts_for_stats} for l in listings if l.price is not None]
     return JSONResponse({"points": points, "series": pricing.daily_series(listings, days)})
+
+
+# ---------- price changes ----------
+
+@router.get("/price-changes", response_class=HTMLResponse)
+def price_changes_page(request: Request, days: int = 7, direction: str = "all", category: str = "",
+                       source: str = "", matched: str = "all", sort: str = "new", deals: bool = False,
+                       page: int = 1, s: Session = Depends(get_session)):
+    """Listings whose price changed between scrapes, grouped by the scrape that saw it."""
+    if redirect := _restore_filters(request, "f_changes"):
+        return redirect
+    rs = runtime_settings.load(s)
+    min_samples = get_settings().min_samples
+
+    def narrow(q):
+        q = _visible_listings(pricing.visible_filter(q, rs.countries, rs.sources))
+        if source:
+            q = q.filter(Listing.source == source)
+        if matched == "matched" or category:
+            q = q.filter(Listing.product_id.isnot(None))
+        if category:
+            q = q.filter(Listing.product.has(Product.category == category))
+        return q
+
+    since = utcnow() - timedelta(days=days)
+    events = changes.price_changes(s, since, narrow)
+    if direction == "down":
+        events = [e for e in events if e.diff < 0]
+    elif direction == "up":
+        events = [e for e in events if e.diff > 0]
+    rows = []
+    for e in events:
+        profit = pricing.listing_profit(e.listing, e.listing.product, rs.fee_pct, rs.fee_fixed, min_samples)
+        rows.append({"c": e, "l": e.listing, "p": e.listing.product, "profit": profit})
+    if deals:
+        rows = [r for r in rows if r["profit"] and r["profit"].is_deal]
+    if sort == "pct":
+        rows.sort(key=lambda r: r["c"].pct)
+    elif sort == "eur":
+        rows.sort(key=lambda r: r["c"].diff)
+    summary = {"down": sum(1 for r in rows if r["c"].diff < 0), "up": sum(1 for r in rows if r["c"].diff > 0),
+               "deals": sum(1 for r in rows if r["profit"] and r["profit"].is_deal)}
+    total = len(rows)
+    rows = rows[(page - 1) * PAGE_SIZE: page * PAGE_SIZE]
+
+    # the scrape run that saw each change (same source, started before it)
+    runs = (s.query(ScrapeRun).filter(ScrapeRun.started_at >= since - timedelta(hours=2))
+            .order_by(ScrapeRun.started_at.desc()).all())
+    last_start = {}
+    for run in runs:
+        last_start.setdefault(run.source, run.started_at)
+    for r in rows:
+        c = r["c"]
+        r["run"] = next((run for run in runs if run.source == r["l"].source and run.started_at <= c.at), None)
+        r["latest"] = c.at >= last_start.get(r["l"].source, c.at)
+    groups: list[dict] = []
+    for r in rows:
+        key = r["run"].id if (sort == "new" and r["run"]) else None
+        if not groups or groups[-1]["key"] != key:
+            groups.append({"key": key, "run": r["run"] if sort == "new" else None, "rows": []})
+        groups[-1]["rows"].append(r)
+
+    categories = sorted({c for (c,) in s.query(Product.category).filter(Product.active.is_(True)).distinct() if c})
+    f = {"days": days, "direction": direction, "category": category, "source": source, "matched": matched,
+         "sort": sort, "deals": deals}
+    resp = _render(request, "price_changes.html", groups=groups, total=total, page=page,
+                   pages=max(1, -(-total // PAGE_SIZE)), summary=summary, categories=categories, f=f)
+    return _remember_filters(request, resp, "f_changes")
 
 
 # ---------- unmatched / listing actions ----------

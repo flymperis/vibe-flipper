@@ -23,7 +23,7 @@
   <span>{{ counts.matched }} με προϊόν</span> ·
   <span>{{ counts.today }} νέες σε 24ω</span>
   {% for r in last_runs %} · <span class="badge src-{{ r.source }}">{{ r.source }}</span>
-    {% if r.ok %}+{{ r.new }} πριν {{ r.finished_at|ago }}{% elif r.finished_at %}<span class="neg">σφάλμα</span>{% else %}τρέχει…{% endif %}
+    {% if r.ok %}+{{ r.new }}{% if r.price_changes %} · <a href="/price-changes">{{ r.price_changes }} αλλαγές τιμής</a>{% endif %} πριν {{ r.finished_at|ago }}{% elif r.finished_at %}<span class="neg">σφάλμα</span>{% else %}τρέχει…{% endif %}
   {% endfor %}
 </div>
 

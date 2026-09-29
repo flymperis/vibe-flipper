@@ -127,6 +127,7 @@ class ScrapeRun(Base):
     ok: Mapped[bool] = mapped_column(Boolean, default=False)
     found: Mapped[int] = mapped_column(Integer, default=0)
     new: Mapped[int] = mapped_column(Integer, default=0)
+    price_changes: Mapped[int | None] = mapped_column(Integer, default=0, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
