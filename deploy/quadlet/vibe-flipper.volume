@@ -1,3 +1,13 @@
 # SQLite database. Same name as the docker/podman-compose volume, so switching keeps the data.
 [Volume]
 VolumeName=vibe-flipper-data
+
+# Where the database lives on the host.
+# Default (lines below commented): Podman's own storage,
+#   ~/.local/share/containers/storage/volumes/vibe-flipper-data/_data
+# To keep it in your own folder instead (e.g. a RAID array), uncomment the three
+# lines and set Device= to a folder used only by Vibe Flipper (it is relabelled
+# for SELinux). Moving an existing database: deploy/quadlet/README.md, "Η βάση σε δικό σου φάκελο".
+#Device=/mnt/data/appdata/vibe-flipper
+#Type=none
+#Options=bind
