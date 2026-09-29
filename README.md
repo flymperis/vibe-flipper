@@ -12,6 +12,8 @@ podman-compose up -d --build   # ή: docker compose up -d --build
 
 Για systemd service (ξεκινά στο boot, restart αν πέσει) υπάρχει έτοιμο **Podman Quadlet** στο [`deploy/quadlet/`](deploy/quadlet/README.md).
 
+**Update:** `./deploy/update.sh`. Κρατά backup της βάσης, κάνει `git pull`, ξαναχτίζει το image και κάνει restart. Λειτουργεί και με compose και με Quadlet. Τα δεδομένα σου (βάση, `.env`, units) δεν αλλάζουν. Το repo έχει μόνο κώδικα και προεπιλογές, όπως το `.env.example` και τα seed προϊόντα.
+
 Άνοιξε `http://<server>:8000`. Στην πρώτη εκκίνηση φορτώνονται τα προϊόντα από το `seed_products.yaml` και γίνεται ένα πιο βαθύ scrape (backfill). Μετά τρέχει κάθε 20 λεπτά, ή όποτε πατήσεις «Refresh τώρα». Τα δεδομένα μένουν στο volume `vibe-flipper-data` (SQLite).
 
 Ollama: αν τρέχει στον host, βάλε `OLLAMA_URL=http://host.docker.internal:11434`. Αν τρέχει σε container, βάλε και τα δύο containers στο ίδιο network και χρησιμοποίησε `http://ollama:11434`. Μοντέλο, URL και τρόπο matching τα αλλάζεις και από τις Ρυθμίσεις.

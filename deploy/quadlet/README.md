@@ -42,14 +42,32 @@ journalctl --user -u vibe-flipper.service -f      # logs
 podman healthcheck run vibe-flipper               # healthcheck χειροκίνητα
 ```
 
-Για update μετά από `git pull`, ξαναχτίζεις το image και κάνεις restart:
+## Update
 
 ```bash
-cd ~/vibe-flipper && git pull
-systemctl --user restart vibe-flipper-build.service vibe-flipper.service
+~/vibe-flipper/deploy/update.sh
 ```
 
-Αν το update φέρνει νέα προϊόντα στα seed αρχεία:
+Το script αλλάζει **μόνο τον κώδικα**:
+1. κρατά backup της βάσης στο `/data/backups` του volume, κρατώντας τα 5 τελευταία (`KEEP_BACKUPS=10` για περισσότερα),
+2. κάνει `git pull`,
+3. ξαναχτίζει το image και κάνει restart,
+4. περιμένει να γίνει healthy.
+
+Δεν αγγίζει τη βάση, το `.env` ή τα units στο `~/.config/containers/systemd`. Αν κάποιο template στο `deploy/quadlet/` άλλαξε στο update, απλώς το αναφέρει, για να περάσεις την αλλαγή με το χέρι αν τη θέλεις.
+
+### Τι είναι δικό σου και τι της εφαρμογής
+
+| | Πού | Στο update |
+|---|---|---|
+| Κώδικας, templates, seed αρχεία | το clone `~/vibe-flipper` | ενημερώνονται |
+| Ρυθμίσεις (Ollama, sites, χώρες…) | `~/vibe-flipper/.env` (εκτός git) και η σελίδα Ρυθμίσεις (στη βάση) | μένουν ως έχουν |
+| Units (port, network, φάκελος βάσης) | `~/.config/containers/systemd/vibe-flipper.*` | μένουν ως έχουν |
+| Βάση: αγγελίες, προϊόντα, αντιστοιχίσεις | volume `vibe-flipper-data` | μένει ως έχει (μόνο νέες στήλες προστίθενται αυτόματα) |
+
+Τα προϊόντα φορτώνονται από τα seed αρχεία **μόνο σε άδεια βάση**. Όσα πρόσθεσες ή άλλαξες από το UI δεν επηρεάζονται από τα updates.
+
+Αν ένα update φέρνει νέα προϊόντα στα seed αρχεία και τα θέλεις, τρέξε την παρακάτω εντολή. Προσοχή: ενημερώνει και τους κανόνες των υπαρχόντων προϊόντων με το ίδιο όνομα, οπότε χάνονται οι αλλαγές που έκανες σε αυτά από το UI.
 
 ```bash
 podman exec -it vibe-flipper python -m scripts.sync_seed
@@ -66,13 +84,13 @@ podman exec -it vibe-flipper python -m scripts.eval_matching                    
 
 Η βάση είναι ένα αρχείο SQLite (`vibe_flipper.db`) στο volume `vibe-flipper-data`. Από προεπιλογή το Podman το κρατά στο `~/.local/share/containers/storage/volumes/vibe-flipper-data/_data`. Για να μπει σε δικό σου φάκελο, π.χ. σε RAID, ξεσχολιάζεις τις γραμμές `Device=`, `Type=none` και `Options=bind` στο `vibe-flipper.volume` και ορίζεις τη διαδρομή στο `Device=`.
 
-- Χρησιμοποίησε φάκελο **μόνο για το Vibe Flipper**, π.χ. `/mnt/data/appdata/vibe-flipper`, όχι τη ρίζα ενός κοινόχρηστου δίσκου. Ο φάκελος αλλάζει SELinux label (`:Z`), οπότε άλλα services, π.χ. Samba, δεν θα έχουν πρόσβαση σε αυτόν.
+- Χρησιμοποίησε φάκελο **μόνο για το Vibe Flipper**, π.χ. `/srv/vibe-flipper`, όχι τη ρίζα ενός κοινόχρηστου δίσκου. Ο φάκελος αλλάζει SELinux label (`:Z`), οπότε άλλα services, π.χ. Samba, δεν θα έχουν πρόσβαση σε αυτόν.
 - Το app μέσα στο container τρέχει ως χρήστης `1000`. Σε rootless Podman ο φάκελος χρειάζεται `podman unshare chown 1000:1000`.
 
 Μεταφορά μιας υπάρχουσας βάσης:
 
 ```bash
-DIR=/mnt/data/appdata/vibe-flipper
+DIR=/srv/vibe-flipper
 systemctl --user stop vibe-flipper.service
 
 # 1. backup του παλιού volume και αντιγραφή στον νέο φάκελο
