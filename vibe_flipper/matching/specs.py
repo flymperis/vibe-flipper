@@ -107,3 +107,22 @@ def variant_label(keys: list[str], ram: int | None, storage: int | None) -> str 
             return None
         parts.append(fmt_gb(v))
     return " / ".join(parts)
+
+
+_LABEL_PART = re.compile(r"^(\d+)(GB|TB)$")
+
+
+def parse_label(keys: list[str], label: str | None) -> dict[str, int] | None:
+    """Inverse of variant_label: ("ram", "storage"), "16GB / 1TB" -> {"ram": 16, "storage": 1024}."""
+    if not label or not keys:
+        return None
+    parts = [x.strip() for x in label.split("/")]
+    if len(parts) != len(keys):
+        return None
+    out = {}
+    for k, part in zip(keys, parts):
+        m = _LABEL_PART.match(part)
+        if not m:
+            return None
+        out[k] = int(m.group(1)) * (TB if m.group(2) == "TB" else 1)
+    return out

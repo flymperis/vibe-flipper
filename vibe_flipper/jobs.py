@@ -298,7 +298,8 @@ def _seed_fields(item: dict) -> dict:
         target_margin_pct=item.get("target_margin_pct", 20),
         spec_keys=[str(k) for k in item.get("specs", [])],
         spec_filter={str(k): int(v) for k, v in (item.get("require") or {}).items()},
-    )
+    ) | ({"variant_ranges": {str(k): {"min": v[0], "max": v[1]} for k, v in item["variant_prices"].items()}}
+         if item.get("variant_prices") else {})
 
 
 def load_seed(session: Session, sync: bool = False) -> tuple[int, int]:

@@ -10,6 +10,7 @@
   <select name="category" onchange="this.form.submit()"><option value="">Όλες οι κατηγορίες</option>
     {% for c in categories %}<option {{ 'selected' if f.category == c }}>{{ c }}</option>{% endfor %}</select>
   <button type="submit">Φίλτρο</button>
+  <a class="btn ghost" href="/products?reset=1">Καθαρισμός</a>
   <span class="muted small">{{ products|length }} προϊόντα</span>
 </form>
 <div class="panel table-wrap">

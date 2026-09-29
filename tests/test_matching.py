@@ -265,3 +265,21 @@ def test_storage_ram_ipad(title, price, expected):
 ])
 def test_ssd_vs_hdd(title, price, expected):
     assert product_with_specs(title, price) == expected
+
+
+def test_variant_price_range_overrides_product_range():
+    r = ProductRule(1, "iPhone 13 Pro Max", ["iphone 13 pro max"], min_price=300, max_price=700,
+                    spec_keys=["storage"], variant_ranges={"1TB": {"min": 450, "max": 1000}})
+    assert r.price_ok(800, {"storage": 1024})       # 1TB: its own range
+    assert not r.price_ok(400, {"storage": 1024})
+    assert not r.price_ok(800, {"storage": 256})    # other variants: product range
+    assert not r.price_ok(800)                      # variant unknown: product range
+    assert match("iPhone 13 Pro Max 1TB", 800, [r], {"storage": 1024, "ram": None}).product_id == 1
+
+
+def test_parse_label_roundtrip():
+    from vibe_flipper.matching.specs import parse_label, variant_label
+    assert parse_label(["ram", "storage"], "16GB / 1TB") == {"ram": 16, "storage": 1024}
+    assert parse_label(["storage"], variant_label(["storage"], None, 512)) == {"storage": 512}
+    assert parse_label(["storage"], "16GB / 1TB") is None
+    assert parse_label([], "1TB") is None

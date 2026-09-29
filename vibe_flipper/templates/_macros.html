@@ -27,7 +27,7 @@
   {% endif %}
   <td class="num">{{ l.price|eur }}{% if l.buy_cost and l.buy_cost != l.price %}<div class="small muted" title="με τα έξοδα αγοραστή">{{ l.buy_cost|eur }}</div>{% endif %}</td>
   <td class="num">{% if pr %}{{ pr.market|eur }}{% if pr.low_data %} <span class="badge warn" title="λίγα δείγματα">λίγα</span>{% endif %}
-      {% if pr.variant %}<div class="small muted" title="{{ 'Άγνωστη/σπάνια παραλλαγή: σύγκριση με τη φθηνότερη παραλλαγή' if pr.assumed else 'Διάμεση της ίδιας παραλλαγής' }}">{{ '≥ ' if pr.assumed }}{{ pr.variant }}</div>{% endif %}
+      {% if pr.variant %}<div class="small muted" title="{% if pr.assumed %}Άγνωστη παραλλαγή: σύγκριση με τη φθηνότερη παραλλαγή{% elif pr.estimated %}Λίγες αγγελίες {{ pr.variant }}: εκτίμηση από {{ pr.basis }}{% else %}Διάμεση της ίδιας παραλλαγής{% endif %}">{{ '≥ ' if pr.assumed }}{{ '~ ' if pr.estimated }}{{ pr.variant }}</div>{% endif %}
       {% else %}<span class="muted">–</span>{% endif %}</td>
   <td class="num">{% if pr %}<span class="{{ 'pos' if pr.profit > 0 else 'neg' }}">{{ pr.profit|eur(true) }}</span>{% else %}–{% endif %}</td>
   <td class="num">{% if pr %}<span class="{{ 'pos' if pr.margin_pct > 0 else 'neg' }}">{{ '%+.0f'|format(pr.margin_pct) }}%</span>

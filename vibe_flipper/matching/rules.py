@@ -5,6 +5,8 @@ import unicodedata
 from dataclasses import dataclass, field
 from functools import lru_cache
 
+from .specs import variant_label
+
 _NON_ALNUM = re.compile(r"[^0-9a-zα-ω]+")
 # Split every letter/digit boundary so "ps5" == "ps 5", "rtx3070ti" == "rtx 3070 ti",
 # "5800X3D" == "5800 x 3 d". Keywords and regexes are written against this normalized form.
@@ -80,23 +82,36 @@ class ProductRule:
     min_price: float | None = None
     max_price: float | None = None
     spec_filter: dict[str, int] = field(default_factory=dict)
+    spec_keys: list[str] = field(default_factory=list)
+    variant_ranges: dict[str, dict] = field(default_factory=dict)
 
     @classmethod
     def from_product(cls, p) -> "ProductRule":
         return cls(p.id, p.name, [str(k) for k in p.include_keywords or []],
                    [str(k) for k in p.exclude_keywords or []],
-                   p.regex or None, p.min_price, p.max_price, dict(p.spec_filter or {}))
+                   p.regex or None, p.min_price, p.max_price, dict(p.spec_filter or {}),
+                   list(p.spec_keys or []), dict(p.variant_ranges or {}))
 
     def specs_ok(self, specs: dict | None) -> bool:
         """All required specs must be known and equal (e.g. storage == 1024 for an "SSD 1TB")."""
         return all((specs or {}).get(k) == v for k, v in self.spec_filter.items())
 
-    def price_ok(self, price: float | None) -> bool:
+    def price_range(self, specs: dict | None = None) -> tuple[float | None, float | None]:
+        """The variant's own range if one is set (e.g. iPhone "1TB"), else the product's."""
+        if self.variant_ranges and specs:
+            label = variant_label(self.spec_keys, specs.get("ram"), specs.get("storage"))
+            vr = self.variant_ranges.get(label or "")
+            if vr:
+                return vr.get("min"), vr.get("max")
+        return self.min_price, self.max_price
+
+    def price_ok(self, price: float | None, specs: dict | None = None) -> bool:
         if price is None:
             return True
-        if self.min_price is not None and price < self.min_price:
+        lo, hi = self.price_range(specs)
+        if lo is not None and price < lo:
             return False
-        if self.max_price is not None and price > self.max_price:
+        if hi is not None and price > hi:
             return False
         return True
 
@@ -134,7 +149,7 @@ def match(title: str, price: float | None, rules: list[ProductRule], specs: dict
                 continue
         if not r.specs_ok(specs):
             continue
-        if not r.price_ok(price):
+        if not r.price_ok(price, specs):
             price_rejected.append(r.id)
             continue
         scored.append((max(hits, key=len), r))

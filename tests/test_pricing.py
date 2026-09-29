@@ -1,8 +1,9 @@
+import math
 from types import SimpleNamespace
 
 import pytest
 
-from vibe_flipper.pricing import compute_stats, listing_profit, remove_outliers
+from vibe_flipper.pricing import compute_stats, listing_profit, remove_outliers, variant_market
 
 
 def test_remove_outliers_drops_extremes():
@@ -49,9 +50,43 @@ def test_unknown_variant_compared_to_cheapest_variant():
     assert pr.market == 600 and pr.variant == "8GB / 256GB" and pr.assumed
 
 
-def test_rare_variant_compared_to_cheapest_variant():
+def test_rare_variant_is_estimated_from_nearest_variant():
+    """24GB / 1TB has one ad: estimated from 16GB / 512GB (+10% per doubling, no
+    pair to measure the step from), blended with its own ad."""
     pr = listing_profit(_listing(900, variant="24GB / 1TB"), _product(**MACBOOK), 0, 0, 5)
-    assert pr.market == 600 and pr.assumed and not pr.is_deal
+    est = 850 * 1.1 ** (math.log2(24 / 16) + 1)
+    assert pr.market == pytest.approx((1100 + 2 * est) / 3, abs=0.01)
+    assert pr.estimated and pr.basis == "16GB / 512GB" and not pr.assumed and not pr.low_data
+
+
+IPHONE = dict(median=400, spec_keys=["storage"], variant_stats={
+    "128GB": {"median": 400, "count": 12},
+    "256GB": {"median": 440, "count": 8},
+    "512GB": {"median": 300, "count": 1},  # one odd cheap ad
+})
+
+
+def test_estimate_uses_measured_step():
+    # 128 -> 256 is +10%; 1TB is two doublings above 256GB and has no ads
+    m = variant_market(_product(**IPHONE), "1TB")
+    assert m.price == pytest.approx(440 * 1.1 ** 2, abs=0.01) and m.basis == "256GB"
+
+
+def test_estimate_never_below_smaller_variant():
+    m = variant_market(_product(**IPHONE), "512GB")
+    assert m.price >= 440 and m.estimated
+
+
+def test_well_sampled_variant_uses_its_median():
+    m = variant_market(_product(**IPHONE), "256GB")
+    assert m.price == 440 and not m.estimated
+
+
+def test_variant_without_any_reliable_neighbour():
+    p = _product(spec_keys=["storage"], variant_stats={"128GB": {"median": 500, "count": 1}})
+    assert variant_market(p, "128GB").price == 500
+    assert variant_market(p, "256GB") is None
+    assert listing_profit(_listing(450, variant="256GB"), p, 0, 0, 5).market == 400  # product median
 
 
 def test_profit_and_deal():

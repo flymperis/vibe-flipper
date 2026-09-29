@@ -1,4 +1,5 @@
 """Market price statistics and per-listing profit."""
+import math
 import statistics
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -102,24 +103,99 @@ def recompute_all(session: Session, window_days: int, countries: set[str] | froz
         p.stats_updated_at = utcnow()
 
 
+# When a variant has too few ads of its own, its price is estimated from a
+# well-sampled neighbour: +STEP per doubling of RAM/storage. STEP is measured
+# from the product's own variants when two of them differ in only that spec.
+DEFAULT_STEP = 0.10
+MIN_STEP = 0.03  # a bigger disk/RAM never costs less
+MAX_STEP = 0.60
+
+
 @dataclass
 class Market:
     price: float
     samples: int
-    variant: str | None = None  # variant whose median is used; None = whole product
+    variant: str | None = None  # variant whose price is used; None = whole product
     assumed: bool = False  # listing's variant unknown -> compared to the cheapest variant
+    estimated: bool = False  # sparse variant: estimated from `basis` (+ its own few ads)
+    basis: str | None = None
+
+
+def _steps(keys: list[str], reliable: dict[str, tuple[dict, float]]) -> dict[str, float]:
+    """log price change per doubling of each spec, from pairs of reliable variants
+    that differ only in that spec (e.g. 128GB vs 256GB, or 8GB/256GB vs 16GB/256GB)."""
+    out = {}
+    items = list(reliable.values())
+    for k in keys:
+        slopes = []
+        for i, (a, pa) in enumerate(items):
+            for b, pb in items[i + 1:]:
+                if a[k] != b[k] and all(a[o] == b[o] for o in keys if o != k):
+                    slopes.append(math.log(pb / pa) / math.log2(b[k] / a[k]))
+        step = statistics.fmean(slopes) if slopes else math.log1p(DEFAULT_STEP)
+        out[k] = min(max(step, math.log1p(MIN_STEP)), math.log1p(MAX_STEP))
+    return out
+
+
+def variant_market(product: Product, label: str) -> Market | None:
+    """Reference price of one variant of `product`:
+    - enough ads of its own -> their median;
+    - otherwise estimated from the nearest well-sampled variant, scaled per
+      doubling of RAM/storage, blended with its own few ads (if any), and kept
+      between the well-sampled variants below and above it."""
+    keys = [k for k in (product.spec_keys or []) if k in specs.SPEC_KEYS]
+    target = specs.parse_label(keys, label)
+    vstats = product.variant_stats or {}
+    own = vstats.get(label)
+    if own and own["count"] >= MIN_VARIANT_SAMPLES:
+        return Market(own["median"], own["count"], label)
+    if target is None:
+        return None
+    reliable = {}
+    for v, s in vstats.items():
+        vec = specs.parse_label(keys, v)
+        if vec and s["count"] >= MIN_VARIANT_SAMPLES and s["median"] > 0:
+            reliable[v] = (vec, s["median"])
+    if not reliable:
+        return Market(own["median"], own["count"], label) if own else None
+
+    steps = _steps(keys, reliable)
+
+    def dist(vec):  # doublings away from the target, over all specs
+        return sum(abs(math.log2(target[k] / vec[k])) for k in keys)
+
+    anchor = min(reliable, key=lambda v: (dist(reliable[v][0]), reliable[v][1]))
+    vec, price = reliable[anchor]
+    est = price * math.exp(sum(steps[k] * math.log2(target[k] / vec[k]) for k in keys))
+    n = own["count"] if own else 0
+    if n:
+        est = (n * own["median"] + (MIN_VARIANT_SAMPLES - n) * est) / MIN_VARIANT_SAMPLES
+    below = [p for vec, p in reliable.values() if all(vec[k] <= target[k] for k in keys)]
+    above = [p for vec, p in reliable.values() if all(vec[k] >= target[k] for k in keys)]
+    lo, hi = max(below, default=None), min(above, default=None)
+    if lo is not None and (hi is None or lo <= hi):
+        est = max(est, lo)
+    if hi is not None and (lo is None or lo <= hi):
+        est = min(est, hi)
+    samples = n + reliable_count(vstats, anchor)
+    return Market(round(est, 2), samples, label, estimated=True, basis=anchor)
+
+
+def reliable_count(vstats: dict, label: str) -> int:
+    return vstats.get(label, {}).get("count", 0)
 
 
 def market_for(listing: Listing, product: Product) -> Market | None:
     """Pick the reference price for a listing:
-    1. its own variant, if that variant has enough samples;
-    2. variant unknown or too rare, on a product with variants -> the cheapest
-       well-sampled variant (conservative: "a deal even if it's the base model");
+    1. its own variant: its median, or an estimate when it has few ads (see variant_market);
+    2. variant unknown, on a product with variants -> the cheapest well-sampled
+       variant (conservative: "a deal even if it's the base model");
     3. otherwise the whole product's median."""
+    if product.spec_keys and listing.variant:
+        m = variant_market(product, listing.variant)
+        if m:
+            return m
     vstats = {v: s for v, s in (product.variant_stats or {}).items() if s["count"] >= MIN_VARIANT_SAMPLES}
-    own = vstats.get(listing.variant or "")
-    if own:
-        return Market(own["median"], own["count"], listing.variant)
     if product.spec_keys and vstats:
         v, s = min(vstats.items(), key=lambda kv: kv[1]["median"])
         return Market(s["median"], s["count"], v, assumed=True)
@@ -138,6 +214,8 @@ class Profit:
     low_data: bool
     variant: str | None = None
     assumed: bool = False
+    estimated: bool = False
+    basis: str | None = None
 
 
 def listing_profit(listing: Listing, product: Product | None, fee_pct: float, fee_fixed: float,
@@ -162,6 +240,8 @@ def listing_profit(listing: Listing, product: Product | None, fee_pct: float, fe
         low_data=m.samples < (MIN_VARIANT_SAMPLES if m.variant else min_samples),
         variant=m.variant,
         assumed=m.assumed,
+        estimated=m.estimated,
+        basis=m.basis,
     )
 
 

@@ -101,10 +101,10 @@ class Matcher:
                 listing.ram_gb = listing.ram_gb or res.ram_gb
                 listing.storage_gb = listing.storage_gb or specs.norm_storage(res.storage_gb or 0)
                 pid, note = res.product_id, "llm"
-                if pid is not None and not self.by_id[pid].price_ok(listing.price):
+                got = {"ram": listing.ram_gb, "storage": listing.storage_gb}
+                if pid is not None and not self.by_id[pid].price_ok(listing.price, got):
                     pid, note = None, f"llm said {self.by_id[pid].name}, but price outside range"
-                elif pid is not None and not self.by_id[pid].specs_ok(
-                        {"ram": listing.ram_gb, "storage": listing.storage_gb}):
+                elif pid is not None and not self.by_id[pid].specs_ok(got):
                     pid, note = None, f"llm said {self.by_id[pid].name}, but specs differ"
                 listing.product_id = pid
                 listing.match_method = "llm" if pid else None

@@ -48,6 +48,7 @@
   <label class="chk"><input type="checkbox" name="deals" value="true" {{ 'checked' if f.deals }}> Μόνο deals</label>
   {% if countries %}<label class="chk" title="Δείχνονται μόνο πωλητές από: {{ countries|join(', ') }}"><input type="checkbox" name="foreign" value="true" {{ 'checked' if f.foreign }}> Και εξωτερικό</label>{% endif %}
   <button type="submit">Φίλτρο</button>
+  <a class="btn ghost" href="/?reset=1" title="Επαναφορά των φίλτρων (αλλιώς μένουν αποθηκευμένα)">Καθαρισμός</a>
   <span class="muted small">{{ total }} αποτελέσματα</span>
 </form>
 

@@ -10,6 +10,8 @@
 #   require: match only listings whose extracted spec equals this, e.g. {storage: 1024} ("SSD 1TB").
 #   specs:   which specs split the product into price variants: [ram], [storage] or [ram, storage]
 #            (for GPUs "ram" = VRAM). Listings are compared with the median of their own variant.
+#   variant_prices: optional price range per variant, replacing min/max_price for it,
+#            e.g. {"1TB": [500, 1000]} or {"16GB / 512GB": [600, 1200]}. Also editable on the product page.
 
 # ---------- Consoles ----------
 - name: PlayStation 5 (Disc)

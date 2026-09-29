@@ -92,6 +92,7 @@ td.title a { color: var(--text); }
 .badge.bad { background: var(--bad-soft); color: var(--bad); }
 .pos { color: var(--good); font-weight: 600; }
 .neg { color: var(--bad); }
+.warn-text { color: var(--warn); }
 .spark { color: var(--accent); vertical-align: middle; }
 .pager { display: flex; gap: 6px; justify-content: center; padding: 12px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }

@@ -31,6 +31,8 @@ class Product(Base):
     spec_keys: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
     # Match only listings whose extracted spec equals this, e.g. {"storage": 1024} for "SSD 1TB".
     spec_filter: Mapped[dict | None] = mapped_column(JSON, default=dict, nullable=True)
+    # Price range per variant, overriding min/max_price for that variant: {"1TB": {"min": 500, "max": 900}}.
+    variant_ranges: Mapped[dict | None] = mapped_column(JSON, default=dict, nullable=True)
 
     # Cached market stats (recomputed after each scrape).
     market_median: Mapped[float | None] = mapped_column(Float, nullable=True)

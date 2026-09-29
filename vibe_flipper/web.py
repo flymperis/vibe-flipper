@@ -2,6 +2,7 @@ import re
 import threading
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import quote, unquote, urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -15,7 +16,7 @@ from .config import get_settings
 from .db import get_session
 from .matching.llm import OllamaClassifier
 from .matching.rules import normalize
-from .matching.specs import SPEC_KEYS, SPEC_LABELS
+from .matching.specs import RAM_SIZES, SPEC_KEYS, SPEC_LABELS, STORAGE_SIZES, fmt_gb, parse_label, variant_label
 from .scrapers.base import FULL
 from .models import Listing, Product, ScrapeRun, utcnow
 
@@ -79,6 +80,7 @@ templates.env.globals["SOURCES"] = SOURCES
 templates.env.globals["static_v"] = lambda name: int((HERE / "static" / name).stat().st_mtime)
 templates.env.globals["SPEC_KEYS"] = SPEC_KEYS
 templates.env.globals["SPEC_LABELS"] = SPEC_LABELS
+templates.env.filters["gb"] = fmt_gb
 
 
 def _render(request: Request, name: str, **ctx):
@@ -115,6 +117,33 @@ def _back(request: Request, default: str = "/", session: Session | None = None):
     return _redirect(request.headers.get("referer") or default, session)
 
 
+# Filters are remembered per page in a cookie: opening the page without a query
+# string restores the last one, "?reset=1" clears it.
+STICKY_MAX_AGE = 365 * 86400
+
+
+def _restore_filters(request: Request, cookie: str) -> RedirectResponse | None:
+    if not request.query_params and (saved := request.cookies.get(cookie)):
+        return RedirectResponse(f"{request.url.path}?{unquote(saved)}", status_code=303)
+    return None
+
+
+def _remember_filters(request: Request, response, cookie: str):
+    if "reset" in request.query_params:
+        response.delete_cookie(cookie)
+    else:
+        qs = urlencode([(k, v) for k, v in request.query_params.multi_items() if k != "page"])
+        if qs:  # stored percent-encoded: "=" and "&" are not valid in a cookie value
+            response.set_cookie(cookie, quote(qs, safe=""), max_age=STICKY_MAX_AGE, samesite="lax", httponly=True)
+    return response
+
+
+def _visible_listings(query):
+    """Hide wanted ads ("ζητείται") and listings of disabled products from the tables."""
+    return query.filter(Listing.is_wanted_ad.isnot(True),
+                        or_(Listing.product_id.is_(None), Listing.product.has(Product.active.is_(True))))
+
+
 # ---------- dashboard ----------
 
 # Tile order / icons for known categories; unknown categories follow alphabetically.
@@ -143,8 +172,10 @@ def _category_tiles(rows: list[dict], categories: list[str]) -> list[dict]:
 def dashboard(request: Request, source: str = "", category: str = "", product_id: str = "",
               deals: bool = False, sort: str = "new", q: str = "", days: int = 7,
               matched: str = "matched", foreign: bool = False, page: int = 1, s: Session = Depends(get_session)):
-    base = (s.query(Listing).options(joinedload(Listing.product))
-            .filter(Listing.first_seen >= utcnow() - timedelta(days=days)))
+    if redirect := _restore_filters(request, "f_dash"):
+        return redirect
+    base = _visible_listings(s.query(Listing).options(joinedload(Listing.product))
+                             .filter(Listing.first_seen >= utcnow() - timedelta(days=days)))
     if not foreign:
         rs = runtime_settings.load(s)
         base = pricing.visible_filter(base, rs.countries, rs.sources)
@@ -188,17 +219,17 @@ def dashboard(request: Request, source: str = "", category: str = "", product_id
     }
     f = {"source": source, "category": category, "product_id": product_id, "deals": deals,
          "sort": sort, "q": q, "days": days, "matched": matched, "foreign": foreign}
-    cat_products = sorted((p for p in products if not category or p.category == category),
+    cat_products = sorted((p for p in products if p.active and (not category or p.category == category)),
                           key=lambda p: natural_key(p.name))
-    return _render(request, "dashboard.html", rows=rows, total=total, page=page, pages=max(1, -(-total // PAGE_SIZE)),
+    resp = _render(request, "dashboard.html", rows=rows, total=total, page=page, pages=max(1, -(-total // PAGE_SIZE)),
                    products=cat_products, categories=categories, last_runs=last_runs, counts=counts, f=f,
                    tiles=tiles, all_tile=all_tile, countries=runtime_settings.load(s).countries,
                    tile_qs=_tile_qs(f))
+    return _remember_filters(request, resp, "f_dash")
 
 
 def _tile_qs(f: dict) -> str:
     """Query string that keeps the current filters but not category/product/page."""
-    from urllib.parse import urlencode
     keep = {k: v for k, v in f.items() if k not in ("category", "product_id") and v not in ("", False, None)}
     if keep.get("matched") == "matched":
         keep.pop("matched")
@@ -209,6 +240,8 @@ def _tile_qs(f: dict) -> str:
 
 @router.get("/products", response_class=HTMLResponse)
 def products_page(request: Request, category: str = "", q: str = "", s: Session = Depends(get_session)):
+    if redirect := _restore_filters(request, "f_products"):
+        return redirect
     categories = sorted({c for (c,) in s.query(Product.category).distinct() if c})
     query = s.query(Product)
     if category:
@@ -224,8 +257,9 @@ def products_page(request: Request, category: str = "", q: str = "", s: Session 
     for p in products:
         ls = s.query(Listing).filter(Listing.product_id == p.id, Listing.first_seen >= since).all()
         sparks[p.id] = sparkline([pt["median"] for pt in pricing.daily_series(ls, 30)])
-    return _render(request, "products.html", products=products, week_counts=counts, sparks=sparks,
+    resp = _render(request, "products.html", products=products, week_counts=counts, sparks=sparks,
                    categories=categories, f={"category": category, "q": q})
+    return _remember_filters(request, resp, "f_products")
 
 
 def _product_from_form(p: Product, form) -> None:
@@ -289,7 +323,8 @@ async def products_set_active(request: Request, s: Session = Depends(get_session
 
 
 def _product_listings(s: Session, pid: int, days: int, variant: str, foreign: bool = False) -> list[Listing]:
-    q = s.query(Listing).filter(Listing.product_id == pid, Listing.first_seen >= utcnow() - timedelta(days=days))
+    q = s.query(Listing).filter(Listing.product_id == pid, Listing.first_seen >= utcnow() - timedelta(days=days),
+                                Listing.is_wanted_ad.isnot(True))
     if not foreign:
         rs = runtime_settings.load(s)
         q = pricing.visible_filter(q, rs.countries, rs.sources)
@@ -306,12 +341,61 @@ def product_detail(request: Request, pid: int, days: int = 90, variant: str = ""
     p = s.get(Product, pid) or _404()
     listings = _product_listings(s, pid, days, variant, foreign)
     categories = sorted({c for (c,) in s.query(Product.category).distinct() if c})
-    variants = sorted((p.variant_stats or {}).items(), key=lambda kv: kv[1]["median"])
+    variants = variant_table(p)
     unknown = (s.query(func.count(Listing.id)).filter(Listing.product_id == pid, Listing.variant.is_(None)).scalar()
                if p.spec_keys else 0)
     return _render(request, "product.html", p=p, rows=_rows(s, listings), days=days, categories=categories,
                    min_samples=get_settings().min_samples, variants=variants, variant=variant,
-                   unknown_variant=unknown, min_variant_samples=pricing.MIN_VARIANT_SAMPLES, foreign=foreign)
+                   selected=next((v for v in variants if v["label"] == variant), None),
+                   unknown_variant=unknown, min_variant_samples=pricing.MIN_VARIANT_SAMPLES, foreign=foreign,
+                   size_options={"ram": sorted(RAM_SIZES), "storage": sorted(STORAGE_SIZES)})
+
+
+def variant_table(p: Product) -> list[dict]:
+    """Every variant with ads or with its own price range: stats, the market price
+    used for its listings (measured or estimated) and the range. Sorted by specs."""
+    keys = [k for k in (p.spec_keys or []) if k in SPEC_KEYS]
+    stats, ranges = p.variant_stats or {}, p.variant_ranges or {}
+    rows = []
+    for label in set(stats) | set(ranges):
+        vec = parse_label(keys, label)
+        if vec is None:
+            continue
+        rows.append({"label": label, "st": stats.get(label), "range": ranges.get(label),
+                     "market": pricing.variant_market(p, label), "key": [vec[k] for k in keys]})
+    return sorted(rows, key=lambda r: r["key"])
+
+
+@router.post("/products/{pid}/ranges")
+async def product_ranges(request: Request, pid: int, s: Session = Depends(get_session)):
+    """Save per-variant price ranges (rows `range_min_<label>` / `range_max_<label>`,
+    plus an optional new row built from the `new_<key>` selects)."""
+    p = s.get(Product, pid) or _404()
+    form = await request.form()
+    keys = [k for k in (p.spec_keys or []) if k in SPEC_KEYS]
+
+    def num(v):
+        v = (v or "").strip().replace(",", ".")
+        try:
+            return float(v) if v else None
+        except ValueError:
+            return None
+
+    ranges = {}
+    for label in form.getlist("label"):
+        lo, hi = num(form.get(f"range_min_{label}")), num(form.get(f"range_max_{label}"))
+        if parse_label(keys, label) and (lo is not None or hi is not None):
+            ranges[label] = {"min": lo, "max": hi}
+    new = {k: form.get(f"new_{k}", "") for k in keys}
+    if keys and all(v.isdigit() for v in new.values()):
+        label = variant_label(keys, int(new["ram"]) if "ram" in new else None,
+                              int(new["storage"]) if "storage" in new else None)
+        lo, hi = num(form.get("new_min")), num(form.get("new_max"))
+        if label and (lo is not None or hi is not None):
+            ranges[label] = {"min": lo, "max": hi}
+    p.variant_ranges = ranges
+    _background(jobs.match_listings, session=s)
+    return _redirect(f"/products/{pid}", s)
 
 
 @router.post("/products/{pid}")
@@ -357,6 +441,7 @@ def product_chart(pid: int, days: int = 90, variant: str = "", foreign: bool = F
 def unmatched(request: Request, source: str = "", q: str = "", show_rejected: bool = False,
               days: int = 14, page: int = 1, s: Session = Depends(get_session)):
     query = s.query(Listing).filter(Listing.product_id.is_(None), Listing.match_method.is_(None),
+                                    Listing.is_wanted_ad.isnot(True),
                                     Listing.first_seen >= utcnow() - timedelta(days=days))
     # Vinted countries are only resolved for matched listings, so unknown is allowed here
     rs = runtime_settings.load(s)
@@ -372,7 +457,7 @@ def unmatched(request: Request, source: str = "", q: str = "", show_rejected: bo
                                  ~(Listing.match_note.like("price outside%") | Listing.match_note.like("accessory%"))))
     total = query.count()
     listings = query.order_by(Listing.first_seen.desc()).offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
-    products = sorted(s.query(Product).all(), key=lambda p: natural_key(p.name))
+    products = sorted(s.query(Product).filter(Product.active.is_(True)), key=lambda p: natural_key(p.name))
     return _render(request, "unmatched.html", listings=listings, products=products, total=total, page=page,
                    pages=max(1, -(-total // PAGE_SIZE)),
                    f={"source": source, "q": q, "show_rejected": show_rejected, "days": days})
