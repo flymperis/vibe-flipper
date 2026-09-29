@@ -1,0 +1,10 @@
+# Builds the image from a clone of the repo.
+# Default location: ~/vibe-flipper (rootless). Change SetWorkingDirectory if you cloned elsewhere.
+# Rebuild after `git pull`:  systemctl --user restart vibe-flipper-build.service vibe-flipper.service
+[Unit]
+Description=Vibe Flipper image build
+
+[Build]
+ImageTag=localhost/vibe-flipper:latest
+SetWorkingDirectory=%h/vibe-flipper
+Pull=newer

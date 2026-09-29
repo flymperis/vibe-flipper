@@ -1,0 +1,32 @@
+# Vibe Flipper as a systemd service (Podman Quadlet).
+# Install (rootless):  see deploy/quadlet/README.md
+[Unit]
+Description=Vibe Flipper (marketplace price tracker)
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=vibe-flipper
+Image=vibe-flipper.build
+Volume=vibe-flipper.volume:/data:Z
+PublishPort=8000:8000
+# Settings (OLLAMA_URL, ...). Ollama running on the host is reachable as
+# http://host.containers.internal:11434 (Podman adds that name automatically).
+EnvironmentFile=%h/vibe-flipper/.env
+Environment=DATABASE_URL=sqlite:////data/vibe_flipper.db
+# If Ollama runs in its own container on a podman network, join it and use http://<ollama-container>:11434
+# Network=ollama.network
+HealthCmd=python -m vibe_flipper.healthcheck
+HealthInterval=60s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=30s
+
+[Service]
+Restart=always
+RestartSec=10
+# first start includes the image build
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target
