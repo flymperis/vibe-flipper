@@ -115,6 +115,16 @@ def test_wanted_ads_are_never_deals():
     assert not pr.is_deal
 
 
+def test_bundles_and_sold_ads_are_never_deals():
+    bundle = _listing(100)
+    bundle.is_bundle = True  # e.g. "2 SSD 500GB + 480GB": the price covers two
+    assert not listing_profit(bundle, _product(), 0, 0, 5).is_deal
+    sold = _listing(100)
+    sold.title = "ΠΟΥΛΗΘΗΚΕ Sapphire PURE Radeon RX 7800 XT"
+    pr = listing_profit(sold, _product(), 0, 0, 5)
+    assert not pr.is_deal and pr.profit == 300
+
+
 def test_no_market_price():
     assert listing_profit(_listing(100), _product(median=None), 0, 0, 5) is None
     assert listing_profit(_listing(None), _product(), 0, 0, 5) is None

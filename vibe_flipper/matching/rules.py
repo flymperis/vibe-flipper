@@ -11,11 +11,14 @@ _NON_ALNUM = re.compile(r"[^0-9a-zα-ω]+")
 # Split every letter/digit boundary so "ps5" == "ps 5", "rtx3070ti" == "rtx 3070 ti",
 # "5800X3D" == "5800 x 3 d". Keywords and regexes are written against this normalized form.
 _LETTER_DIGIT = re.compile(r"(?<=[a-zα-ω])(?=\d)|(?<=\d)(?=[a-zα-ω])")
+# Spellings that would hide a model: "I phone 14" = "iphone 14", "15ProMax" = "15 pro max".
+_ALIASES = [(re.compile(r"(?:^| )i phone(?= |$)"), " iphone"), (re.compile(r"(?<= )promax(?= |$)"), "pro max")]
 
-WANTED_PATTERNS = ["ζητω", "ζητειται", "ζητουνται", "ζηταω", "ψαχνω", "αγοραζω", "wtb", "looking for", "wanted"]
+WANTED_PATTERNS = ["ζητω", "ζητειται", "ζητουνται", "ζηταω", "ζητηση", "ψαχνω", "αναζητω", "αναζητειται", "αγοραζω",
+                   "θελω να αγορασω", "wtb", "looking for", "wanted"]
 BROKEN_PATTERNS = [
     "χαλασμεν", "ανταλλακτικ", "ανταλακτικ", "επισκευ", "δεν λειτουργ", "δεν δουλευ", "δεν ανοιγει",
-    "δεν βγαζει εικονα", "χωρισ εικονα", "σπασμεν", "κλειδωμεν", "icloud lock", "broken", "not working",
+    "δεν βγαζει εικονα", "χωρισ εικονα", "σπασμεν", "ραγισμεν", "κλειδωμεν", "icloud lock", "broken", "not working",
     "for parts", "for repair", "repair", "defect", "faulty", "artifact", "no display", "ελαττωματικ",
 ]
 
@@ -25,8 +28,10 @@ def normalize(text: str) -> str:
     text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
     text = text.replace("ς", "σ")
     text = _NON_ALNUM.sub(" ", text)
-    text = _LETTER_DIGIT.sub(" ", text)
-    return " ".join(text.split())
+    text = " ".join(_LETTER_DIGIT.sub(" ", text).split())
+    for pattern, repl in _ALIASES:
+        text = pattern.sub(repl, text)
+    return text.strip()
 
 
 @lru_cache(maxsize=4096)
@@ -61,6 +66,30 @@ def is_accessory_title(norm_title: str) -> bool:
     return first in ACCESSORY_PREFIXES or any(first.startswith(p) for p in ("προστατευτικ", "ανταλλακτικ"))
 
 
+# Games are listed as "<game> (Nintendo Switch)", "<game> (PS5)": the console is only the platform.
+_GAME_TITLE = re.compile(r"\((?:nintendo )?switch(?: ?2)?\)\s*$|\((?:ps|playstation) ?[345]\)\s*$|\(xbox[^)]*\)\s*$",
+                         re.I)
+
+# "Στολή ... ανταλλαγή με RTX 3060", "iPad ... Trade ps5": what follows is wanted in exchange, not sold.
+# (not "ανταλλακτικά" = spare parts)
+_TRADE = re.compile(r"(?:^| )(?:ανταλλα(?!κτ)\S*|αλλαγη με|trade|swap)(?= |$)")
+
+
+def offered(norm_title: str) -> str:
+    """The part of a title that describes what is sold: everything before a trade offer.
+    A title that *starts* with the trade word ("Ανταλλαγή iPhone 16 Pro") offers that item."""
+    m = _TRADE.search(norm_title)
+    return norm_title[:m.start()].strip() if m and norm_title[:m.start()].strip() else norm_title
+
+
+# "ΠΟΥΛΗΘΗΚΕ ...", "ΔΟΘΗΚΕ-ΕΥΧΑΡΙΣΤΩ", "ΚΡΑΤΗΜΕΝΟ": still listed, but no longer for sale.
+_UNAVAILABLE = re.compile(r"πουληθηκε|δοθηκε|κρατημεν|(?:^| )sold(?= |$)")
+
+
+def is_unavailable(title: str | None) -> bool:
+    return bool(title) and _UNAVAILABLE.search(normalize(title)) is not None
+
+
 def detect_flags(title: str) -> dict[str, bool]:
     """Cheap heuristics; the LLM refines these when enabled."""
     n = normalize(title)
@@ -75,13 +104,24 @@ def detect_flags(title: str) -> dict[str, bool]:
 # Bundles: a second *major* item sold together with the product, so the price is not the product's.
 # Games, controllers, cases, chargers... are what consoles/handhelds normally come with: not bundles.
 _PC_PARTS = {"GPU", "CPU"}
-# chipset of a motherboard: "z 590", "b 760 m", "x 570" (normalized: letters and digits split)
-_MOTHERBOARD = re.compile(r"(?:^| )(?:[abhxz] [1-9]\d0(?= |$))|μητρικ|motherboard")
+_STORAGE = {"SSD", "NVMe", "HDD"}
+_PHONES = {"iPhone", "Samsung"}
+# chipset of a motherboard: "z 590", "b 760 m", "x 570", also typed with a Greek Ζ ("Ζ690")
+_MOTHERBOARD = re.compile(r"(?:^| )(?:[abhxzζ] [1-9]\d0(?= |$))|μητρικ|motherboard")
 _GPU_MODEL = re.compile(r"(?:^| )(?:rtx|gtx|rx|radeon(?: rx)?) (\d{3,4})(?= |$)")
-_DISCRETE_GPU = re.compile(r"(?:^| )(?:rtx|gtx|rx) \d{3,4}(?= |$)")  # not "Radeon 780M" graphics of a CPU
-_CPU = re.compile(r"ryzen|(?:^| )i [3579] \d{4,5}|core ultra|(?:^| )intel core")
+_DISCRETE_GPU = re.compile(r"(?:^| )(?:rtx|gtx|rx) \d{3,4}(?= |$)|quadro")  # not "Radeon 780M" graphics of a CPU
+_CPU = re.compile(r"ryzen|(?:^| )i [3579] \d{4,5}|core ultra|(?:^| )intel core|xeon|(?:^| )fx \d{4}(?= |$)")
+_CPU_MODEL = re.compile(r"(?:^| )(?:i [3579]|ryzen [3579]) (\d{4,5})(?= |$)")  # "i5-10500 i5-8500 i5-6500": a lot
 _PSU = re.compile(r"τροφοδοτικ|(?:^| )psu(?= |$)|(?:^| )\d{3,4} w(?= |$)")
 _RAM = re.compile(r"(?:^| )ddr [345](?= |$).*(?:^| )\d{1,3} gb|(?:^| )\d{1,3} gb.*(?:^| )ddr [345](?= |$)")
+_RAM_WORD = re.compile(r"(?:^| )(?:ddr ?[345]|ram|dimm|sodimm)(?= |$)")
+_CHARGER = re.compile(r"φορτιστ|charger")
+_DISK_WORD = re.compile(r"(?:^| )(?:ssd|nvme|hdd)(?= |$)")
+_CAPACITY = re.compile(r"(\d+(?:[.,]\d+)?)\s*(gb|tb)\b(?!\s*/\s*s)", re.I)  # not "6Gb/s"
+# "2x Corsair MP510" (not "Gen4 x4"), "Δυο SSD 512GB"
+_SEVERAL = re.compile(r"^[2-9] x |^(?:[2-9]|δυο|τρια|τεσσερα) (?:ssd|hdd|nvme|δισκ|σκληρ)")
+_IPHONE_MODEL = re.compile(r"(?:^| )iphone (\d{1,2}|xr|xs|x|se)(?= |$)")
+_OTHER_PHONE = re.compile(r"(?:^| )(?:oneplus|xiaomi|redmi|poco|pixel|huawei|motorola|honor|oppo)(?= |$)")
 # another device, unless it is the listing's own kind: (phrase, categories it belongs to)
 _DEVICES = [
     ("monitor", ()), ("λαπτοπ", ("MacBook",)), ("laptop", ("MacBook",)), ("apple watch", ("Smartwatch",)),
@@ -91,23 +131,33 @@ _DEVICES = [
     ("nintendo", ("Nintendo",)), ("steam deck", ("Handheld PC",)), ("rog ally", ("Handheld PC",)),
 ]
 
-_TRADE = re.compile(r"ανταλλαγ|αλλαγη|(?:^| )(?:trade|swap)(?= |$)")
+def _capacities(title: str) -> set[float]:
+    return {float(v.replace(",", ".")) * (1024 if u.lower() == "tb" else 1) for v, u in _CAPACITY.findall(title)}
 
 
 def is_bundle(title: str, category: str | None) -> bool:
-    """Title sells the product together with another major item: "i7-11700K + Z590 Aorus",
-    "RTX 2060 μαζί με RX 590", "Mac mini M4 + Samsung monitor", "iPhone 16 Pro + Apple Watch"."""
-    n = normalize(title)
+    """Title sells the product together with another major item, or several of them:
+    "i7-11700K + Z590 Aorus", "RTX 2060 μαζί με RX 590", "Mac mini M4 + Samsung monitor",
+    "iPhone 16 Pro + Apple Watch", "SSD 240 GB και 480 GB", "iphone 15 +2 iphone 14"."""
+    # "ανταλλαγή με iPad" offers a trade: only what comes before it is sold
+    n = offered(normalize(title))
     if category in _PC_PARTS:
         gpus = set(_GPU_MODEL.findall(n))
         if (_MOTHERBOARD.search(n) or _PSU.search(n) or _RAM.search(n)
                 or (category == "GPU" and (len(gpus) > 1 or _CPU.search(n)))
-                or (category == "CPU" and _DISCRETE_GPU.search(n))):
+                or (category == "CPU" and (_DISCRETE_GPU.search(n) or len(set(_CPU_MODEL.findall(n))) > 1))):
             return True
-    # "ανταλλαγή με iPad" offers a trade, "παιχνίδια για PS4" are games: neither is sold along
-    offered = _TRADE.split(n, 1)[0]
-    return any(category not in own and re.search(rf"(?:^| )(?<!για )(?<!for ){re.escape(_norm_phrase(phrase))}(?= |$)",
-                                                 offered)
+    if category == "RAM" and (_MOTHERBOARD.search(n) or _CPU.search(n) or _DISCRETE_GPU.search(n)
+                              or _DISK_WORD.search(n)):
+        return True
+    if category in _STORAGE and (_RAM_WORD.search(n) or _CHARGER.search(n) or _SEVERAL.search(n)
+                                 or len(_capacities(title)) > 1):
+        return True
+    if category in _PHONES and (len(set(_IPHONE_MODEL.findall(n))) > 1
+                                or (category == "iPhone" and _OTHER_PHONE.search(n))):
+        return True
+    # "παιχνίδια για PS4" are games for it, not a second console
+    return any(category not in own and re.search(rf"(?:^| )(?<!για )(?<!for ){re.escape(_norm_phrase(phrase))}(?= |$)", n)
                for phrase, own in _DEVICES)
 
 
@@ -170,9 +220,11 @@ class RuleResult:
 
 
 def match(title: str, price: float | None, rules: list[ProductRule], specs: dict | None = None) -> RuleResult:
-    n = normalize(title)
+    n = offered(normalize(title))
     if is_accessory_title(n):
         return RuleResult(None, 0.0, [], [], "accessory (title prefix)")
+    if _GAME_TITLE.search(title):
+        return RuleResult(None, 0.0, [], [], "game (platform in brackets)")
     scored: list[tuple[str, ProductRule]] = []  # (longest matched phrase, rule)
     price_rejected: list[int] = []
     for r in rules:

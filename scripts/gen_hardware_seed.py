@@ -25,8 +25,15 @@ SYSTEM_WORDS = ["laptop", "λαπτοπ", "φορητ*", "notebook", "pc", "desk
 BUILD_WORDS = ["ddr 3", "ddr 4", "ddr 5", "μητρικ*", "motherboard", "x 3 d"]
 # Screens: "1920x1080" / "1680x1050" must not look like a GTX 1080 / 1050.
 DISPLAY_WORDS = ["monitor", "οθον*", "tv", "τηλεορασ*", "projector", "προτζεκτορ*"]
-GPU_EXCLUDE = SYSTEM_WORDS + BUILD_WORDS + DISPLAY_WORDS + ["ryzen", "i 3", "i 5", "i 7", "i 9", "intel core"]
-CPU_EXCLUDE = SYSTEM_WORDS + ["rtx", "gtx", "rx", "μητρικ*", "motherboard", "combo", "bundle", "cooler master"]
+# PCs, laptops and network gear named with a GPU-like number: "Dell OptiPlex 3060", "FRITZ!Box 4060",
+# "ROG Zephyrus ... RTX 5090".
+DEVICE_WORDS = ["optiplex", "dell", "thinkcentre", "elitedesk", "prodesk", "zephyrus", "legion", "omen", "predator",
+                "alienware", "victus", "katana", "router", "fritz", "modem"]
+GPU_EXCLUDE = (SYSTEM_WORDS + BUILD_WORDS + DISPLAY_WORDS + DEVICE_WORDS
+               + ["ryzen", "i 3", "i 5", "i 7", "i 9", "intel core"])
+# "Κάρτες AMD 5700XT" are graphics cards, "FeinTech VSW12100 HDMI Switch" is not an i3-12100.
+CPU_EXCLUDE = SYSTEM_WORDS + ["rtx", "gtx", "rx", "μητρικ*", "motherboard", "combo", "bundle", "cooler master",
+                              "καρτ*", "gpu", "vga", "hdmi", "switch", "router"]
 # Mobile CPU suffixes: "13900HX" must not match the desktop 13900.
 MOBILE_SUFFIXES = ["h", "hx", "hk", "hs", "u", "p", "t", "te", "m"]
 
@@ -217,6 +224,10 @@ RYZEN_NAMES = {
 }
 
 
+# Ryzen numbers that exist as XT. Elsewhere "5700 XT" / "7600 XT" / "9070 XT" is a Radeon card.
+RYZEN_XT = {"3600", "3800", "3900", "5600", "5800", "5900"}
+
+
 def ryzen_entries() -> list[dict]:
     suffix_phrases = {"X": ["x", "xt", "f"], "X3D": ["x 3 d"], "G": ["g", "gt", "ge"]}
     by_num: dict[str, list[str]] = {}
@@ -227,13 +238,16 @@ def ryzen_entries() -> list[dict]:
         name = RYZEN_NAMES.get((num, grp), f"Ryzen {tier} {num}{grp}")
         if grp == "X":
             # the bare number clashes with RX GPUs -> needs "ryzen"/"r5" context or an X suffix
-            include = [f"ryzen {tier} {num}", f"r {tier} {num}", f"ryzen {num}"] + [f"{num} {s}" for s in suffix_phrases["X"]]
+            include = [f"ryzen {tier} {num}", f"r {tier} {num}", f"ryzen {num}"] + [
+                f"{num} {s}" for s in suffix_phrases["X"] if s != "xt" or num in RYZEN_XT]
         else:
             include = [f"{num} {s}" for s in suffix_phrases[grp]]
         siblings = [f"{num} {s}" for g in by_num[num] if g != grp for s in suffix_phrases[g]]
         # "5800 x" is a prefix of our own "5800 x 3 d": excluding it would exclude ourselves
         siblings = [x for x in siblings if not any(inc.startswith(x + " ") for inc in include)]
         siblings += [f"{num} {m}" for m in MOBILE_SUFFIXES if m not in ("t", "te", "m")]
+        if num not in RYZEN_XT:
+            siblings.append(f"{num} xt")
         out.append({
             "name": name,
             "category": "CPU",
@@ -250,8 +264,12 @@ def ryzen_entries() -> list[dict]:
 # The capacity comes from the spec extractor (matching/specs.py), which folds marketing sizes onto
 # classes (480/500/512GB -> 512GB, 960/1000GB -> 1TB) and reads RAM kits as totals ("2x8GB" -> 16GB).
 TB = 1024
-NOT_A_PART = SYSTEM_WORDS + ["ps 5", "playstation", "xbox", "switch", "steam deck", "macbook", "iphone", "ipad",
-                             "rtx", "gtx", "ryzen", "i 3", "i 5", "i 7", "i 9", "μητρικ*", "motherboard", "combo"]
+NOT_A_PART = SYSTEM_WORDS + [w for w in DEVICE_WORDS if w != "dell"] + [  # Dell also sells RAM modules
+    "ps 5", "playstation", "xbox", "switch", "steam deck", "macbook", "imac", "mac mini", "iphone", "ipad",
+    "rtx", "gtx", "ryzen", "i 3", "i 5", "i 7", "i 9", "μητρικ*", "motherboard", "combo",
+    # laptop lines: "Dell Precision ... 64GB DDR5 - 1TB", "Fujitsu Lifebook ... ssd 240GB"
+    "precision", "latitude", "inspiron", "xps", "thinkpad", "ideapad", "yoga", "elitebook", "probook",
+    "zenbook", "vivobook", "lifebook", "surface"]
 # NVMe (M.2 PCIe) vs SATA SSDs: explicit words or well-known model lines. A bare "SSD" counts as SATA;
 # a bare "M.2 SSD" (type unknown) matches both and is left to the LLM.
 NVME_MARKERS = ["nvme", "pcie", "pci e", "gen 3", "gen 4", "gen 5", "990 pro", "980 pro", "970 evo", "960 evo",
@@ -288,29 +306,35 @@ def _size(gb: int) -> str:
     return f"{gb // TB}TB" if gb >= TB else f"{gb}GB"
 
 
+# Memory and flash prices swing a lot (2026: DDR5 16GB at 100-300 €): wide upper bounds, while
+# laptops / PCs / consoles that mention "16GB RAM 1TB SSD" are kept out by NOT_A_PART and price.
+STORAGE_MAX = 4.0
+RAM_MAX = 5.0
+
+
 def storage_entries() -> list[dict]:
     out = []
     for gb, typ in SSD_SATA:
         out.append({"name": f"SSD {_size(gb)}", "category": "SSD", "include": SATA_WORDS,
                     "exclude": NVME_MARKERS + HDD_MARKERS + NOT_A_PART + MEDIA_WORDS + EXTERNAL_WORDS,
-                    "require": {"storage": gb}, "min_price": round(typ * 0.35), "max_price": round(typ * 2.2),
+                    "require": {"storage": gb}, "min_price": round(typ * 0.35), "max_price": round(typ * STORAGE_MAX),
                     "queries": []})
     for gb, typ in SSD_NVME:
         out.append({"name": f"NVMe {_size(gb)}", "category": "NVMe", "include": NVME_WORDS,
                     "exclude": ["sata"] + HDD_MARKERS + NOT_A_PART + MEDIA_WORDS + EXTERNAL_WORDS,
-                    "require": {"storage": gb}, "min_price": round(typ * 0.35), "max_price": round(typ * 2.2),
+                    "require": {"storage": gb}, "min_price": round(typ * 0.35), "max_price": round(typ * STORAGE_MAX),
                     "queries": []})
     for gb, typ in HDD:
         out.append({"name": "HDD 500GB" if gb == 512 else f"HDD {_size(gb)}", "category": "HDD", "include": HDD_WORDS,
-                    "exclude": ["ssd", "nvme", "m 2"] + NOT_A_PART + MEDIA_WORDS,
-                    "require": {"storage": gb}, "min_price": round(typ * 0.35), "max_price": round(typ * 2.2),
+                    "exclude": ["ssd", "nvme", "m 2", "dock", "lacie"] + NOT_A_PART + MEDIA_WORDS,
+                    "require": {"storage": gb}, "min_price": round(typ * 0.35), "max_price": round(typ * STORAGE_MAX),
                     "queries": []})
     for gen, sizes in RAM.items():
         for gb, typ in sizes:
             out.append({"name": f"RAM {gen} {gb}GB", "category": "RAM", "include": [gen.lower()],
                         "exclude": ["ssd", "nvme", "hdd"] + NOT_A_PART + ["cpu", "επεξεργαστ*", "gpu"],
                         "require": {"ram": gb}, "min_price": max(2, round(typ * 0.3)),
-                        "max_price": round(typ * 2.2), "queries": []})
+                        "max_price": round(typ * RAM_MAX), "queries": []})
     return out
 
 

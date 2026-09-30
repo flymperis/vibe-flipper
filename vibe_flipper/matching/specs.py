@@ -23,8 +23,8 @@ _CAP = re.compile(r"(?<![\d.])(\d{1,4}(?:[.,]5)?)\s*(gb|tb|g)(?![a-zα-ω])", re
 _BARE_STORAGE = re.compile(r"(?<![\d.])(\d{3,4})\s*(?:ssd|nvme|m\.?2)\b", re.I)
 _RAM_HINT = re.compile(r"^\s*(?:of\s+)?(?:ram|ddr\d?|unified|μνημη|μνήμη|memory|vram|gddr\d?x?)", re.I)
 _STORAGE_HINT = re.compile(r"^\s*(?:ssd|nvme|hdd|storage|αποθηκ|δισκ|δίσκ|ssd)", re.I)
-# RAM kits: "2x8GB", "2 x 16 GB", "4×8G"
-_KIT = re.compile(r"(?<![\d.])([1-8])\s*[x×]\s*(\d{1,3})\s*(?:gb|g)(?![a-zα-ω])", re.I)
+# RAM kits: "2x8GB", "2 x 16 GB", "4×8G", "2*16GB"
+_KIT = re.compile(r"(?<![\d.])([1-8])\s*[x×*]\s*(\d{1,3})\s*(?:gb|g)(?![a-zα-ω])", re.I)
 _DDR = re.compile(r"(?<![a-z])ddr\s?[2-5]", re.I)  # not GDDR
 _DISK_WORDS = re.compile(r"ssd|nvme|hdd|m\.2|σκληρ|δισκ|δίσκ", re.I)
 

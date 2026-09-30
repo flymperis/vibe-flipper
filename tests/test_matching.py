@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from vibe_flipper.matching.rules import ProductRule, contains, detect_flags, is_bundle, match, normalize
+from vibe_flipper.matching.rules import ProductRule, contains, detect_flags, is_bundle, match, normalize, offered
 
 ROOT = Path(__file__).parents[1]
 SEED = [item for f in ("seed_products.yaml", "seed_hardware.yaml")
@@ -333,3 +333,79 @@ def test_bundle(title, category):
 ])
 def test_not_bundle(title, category):
     assert not is_bundle(title, category)
+
+
+@pytest.mark.parametrize("title,price,expected", [
+    # spellings
+    ("I phone 14 pro purple", 400, "iPhone 14 Pro"),
+    ("Apple iPhone 15ProMax -256Gb Titanium Blue", 750, "iPhone 15 Pro Max"),
+    ("Apple iPhone 13 mini (Μπλε/128 GB)", 200, None),
+    ("Oneplus 13 12/512GB Mαυρο/oneplus 9/iphone 15", 550, None),
+    # a cheap ad is a deal, not an accessory
+    ("Apple iPhone 16 Pro Max (Μαύρο/256 GB)", 720, "iPhone 16 Pro Max"),
+    # trade offers: only what is sold counts
+    ("BÜSE δερμάτινη στολή νούμερο 50 – ανταλλαγή με Nvidia 3060 12GB", 200, None),
+    ("iPad 12,9 m1. Trade ps5", 500, None),
+    ("Πωλείται PS5 Blu-ray σε αριστη κατασταση η ανταλλάσετε με PS5 PRO", 479, "PlayStation 5 (Disc)"),
+    ("Ανταλλαγή Apple iPhone 16 Pro (Μαύρο/128 GB)", 800, "iPhone 16 Pro"),
+    ("RTX 3080 Eagle - ΜΟΝΟ ΓΙΑ ΑΝΤΑΛΛΑΚΤΙΚΑ", 200, "RTX 3080"),  # spare parts, not a trade
+    # games and collector's editions are not the console
+    ("The Legend of Zelda: Tears the Kingdom Collector's Edition (Nintendo Switch)", 125, None),
+    ("God of War Ragnarök Jotnar Collector's Edition PS5", 390, None),
+    ("Nintendo Switch OLED Zelda TOTK Edition", 280, "Nintendo Switch OLED"),
+    # PCs, laptops, routers, HDMI switches and Radeon cards sharing a model number
+    ("DELL OPTIPLEX 3060 MICRO", 180, None),
+    ("AVM FRITZ!Box 4060 ασύρματο router Wi-Fi 6", 147, None),
+    ("ASUS ROG Zephyrus G16 OLED GeForce RTX 5090", 3500, None),
+    ("FeinTech VSW12100 HDMI 2.1 Switch 2 in 1", 45, None),
+    ("msi 5700xt gaming x", 199, None),
+    ("AMD Ryzen 5 3600XT Box", 105, "Ryzen 5 3600/3600X"),
+    ("Dell Precision 3571 - 12700H - 64GB DDR5 - 1TB M2", 900, None),
+    ("DELL SNPR1WG8C/16G (16 GB/DDR4/3200MHz)", 60, "RAM DDR4 16GB"),
+])
+def test_rules_from_the_2026_09_audit(title, price, expected):
+    from vibe_flipper.matching.specs import extract
+    assert NAMES.get(match(title, price, RULES, extract(title)).product_id) == expected
+
+
+def test_offered_part_of_a_title():
+    assert offered(normalize("iPhone 16 Pro Max ανταλλαγή με 17 pro max")) == "iphone 16 pro max"
+    assert offered(normalize("Ανταλλαγή iPhone 16 Pro")) == "ανταλλαγη iphone 16 pro"
+    assert offered(normalize("PS5 δεκτές ανταλλαγές")) == "ps 5 δεκτεσ"
+
+
+@pytest.mark.parametrize("title,category", [
+    ("Επεξεργαστές i5-10500 i5-8500 i5-6500", "CPU"),
+    ("MSI Ζ690i unify Mini itx - Intel 13600k", "CPU"),  # Greek Ζ
+    ("3700x + MSI Tomahawk Max II B450 + 2x8GB DDR4", "RAM"),
+    ("ASUS H81M-C + Xeon E3-1220 v3 + 16GB DDR3", "RAM"),
+    ("SSD Kingston και Crucial 240 GB και 480 GB", "SSD"),
+    ("2x Corsair Force Series MP510 960GB NVMe", "NVMe"),
+    ("Δυο SSD 2.5in 512GB", "SSD"),
+    ("Hp charger 150W 19.5V και SSD 512GB", "SSD"),
+    ("iphone 15 128gb +2 iphone 14 μαυρο και κοκκινο 128gb", "iPhone"),
+])
+def test_bundle_2026_09(title, category):
+    assert is_bundle(title, category)
+
+
+@pytest.mark.parametrize("title,category", [
+    ("WD Gold 4TB WD4002FYYZ 7200 RPM 6Gb/s 128MB", "HDD"),
+    ("Kingston NV2 2TB GEN4 X4 M.2 2280", "NVMe"),
+    ("Πωλείται Intenso M.2 SATA III SSD 1TB (1024GB)", "SSD"),
+    ("Apple iPhone 16 Pro Max (Μαύρο/256 GB) ανταλλαγή με 17 pro max", "iPhone"),
+    ("G.Skill Ripjaws V 16GB (2x8GB) DDR4 3200MHz", "RAM"),
+])
+def test_not_bundle_2026_09(title, category):
+    assert not is_bundle(title, category)
+
+
+def test_flags_2026_09():
+    assert detect_flags("Ζήτηση RTX 3060")["is_wanted_ad"]
+    assert detect_flags("Αναζητώ 3080-3080 TI")["is_wanted_ad"]
+    assert detect_flags("iPhone 15 Pro Max 256 GB Ραγισμένη Οθόνη")["is_broken"]
+
+
+def test_ram_kit_with_star():
+    from vibe_flipper.matching.specs import extract
+    assert extract("Corsair Vengeance LPX DDR4 2*16GB 3200MHz")["ram"] == 32

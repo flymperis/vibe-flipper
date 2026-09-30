@@ -17,7 +17,7 @@
 - name: PlayStation 5 (Disc)
   category: PlayStation
   include: [ps 5, playstation 5]
-  exclude: [digital, pro, portal, ps 4, vr, memory card, memorie, cover*, καλυμμα*, skin*]
+  exclude: [digital, pro, portal, ps 4, vr, memory card, memorie, cover*, καλυμμα*, skin*, collector*, expansion pass, amiibo]
   min_price: 250
   max_price: 650
   queries: [ps5]
@@ -26,7 +26,7 @@
   category: PlayStation
   include: [ps 5, playstation 5]
   regex: '\bdigital\b'
-  exclude: [pro, portal, ps 4, vr, memory card, memorie, cover*, καλυμμα*, skin*]
+  exclude: [pro, portal, ps 4, vr, memory card, memorie, cover*, καλυμμα*, skin*, collector*, expansion pass, amiibo]
   min_price: 200
   max_price: 550
   queries: [ps5 digital]
@@ -34,7 +34,7 @@
 - name: PlayStation 5 Pro
   category: PlayStation
   include: [ps 5 pro, playstation 5 pro]
-  exclude: [controller, χειριστηριο, vr, ssd, memory card, memorie, cover*, καλυμμα*, skin*]
+  exclude: [controller, χειριστηριο, vr, ssd, memory card, memorie, cover*, καλυμμα*, skin*, collector*, expansion pass, amiibo]
   min_price: 450
   max_price: 1000
   queries: [ps5 pro]
@@ -49,6 +49,7 @@
 - name: PlayStation 4 Pro
   category: PlayStation
   include: [ps 4 pro, playstation 4 pro]
+  exclude: [collector*, expansion pass, amiibo]
   min_price: 100
   max_price: 350
   queries: [ps4 pro]
@@ -56,6 +57,7 @@
 - name: PlayStation 4 Slim
   category: PlayStation
   include: [ps 4 slim, playstation 4 slim]
+  exclude: [collector*, expansion pass, amiibo]
   min_price: 80
   max_price: 250
   queries: [ps4 slim]
@@ -63,7 +65,7 @@
 - name: Xbox Series X
   category: Xbox
   include: [xbox series x, series x]
-  exclude: [series s, memory card, memorie, cover*, καλυμμα*, skin*]
+  exclude: [series s, memory card, memorie, cover*, καλυμμα*, skin*, collector*, expansion pass, amiibo]
   min_price: 250
   max_price: 650
   queries: [xbox series x]
@@ -71,7 +73,7 @@
 - name: Xbox Series S
   category: Xbox
   include: [xbox series s, series s]
-  exclude: [series x, memory card, memorie, cover*, καλυμμα*, skin*]
+  exclude: [series x, memory card, memorie, cover*, καλυμμα*, skin*, collector*, expansion pass, amiibo]
   min_price: 120
   max_price: 350
   queries: [xbox series s]
@@ -79,6 +81,7 @@
 - name: Nintendo Switch 2
   category: Nintendo
   include: [switch 2]
+  exclude: [collector*, expansion pass, amiibo]
   min_price: 280
   max_price: 650
   queries: [nintendo switch 2]
@@ -86,7 +89,7 @@
 - name: Nintendo Switch OLED
   category: Nintendo
   include: [switch oled]
-  exclude: [switch 2]
+  exclude: [switch 2, collector*, expansion pass, amiibo]
   min_price: 150
   max_price: 400
   queries: [switch oled]
@@ -94,6 +97,7 @@
 - name: Nintendo Switch Lite
   category: Nintendo
   include: [switch lite]
+  exclude: [collector*, expansion pass, amiibo]
   min_price: 70
   max_price: 220
   queries: [switch lite]
@@ -101,7 +105,7 @@
 - name: Nintendo Switch (V1/V2)
   category: Nintendo
   include: [nintendo switch]
-  exclude: [oled, lite, switch 2]
+  exclude: [oled, lite, switch 2, collector*, expansion pass, amiibo]
   min_price: 100
   max_price: 300
   queries: [nintendo switch]
@@ -146,7 +150,7 @@
   category: iPhone
   specs: [storage]
   include: [iphone 13]
-  exclude: [pro, mini, max]
+  exclude: [pro, mini, max, oneplus, galaxy, xiaomi, redmi, pixel, huawei]
   min_price: 150
   max_price: 450
   queries: [iphone 13]
@@ -155,8 +159,8 @@
   category: iPhone
   specs: [storage]
   include: [iphone 13 pro]
-  exclude: [max]
-  min_price: 250
+  exclude: [max, oneplus, galaxy, xiaomi, redmi, pixel, huawei]
+  min_price: 200
   max_price: 600
   queries: [iphone 13 pro]
 
@@ -164,8 +168,8 @@
   category: iPhone
   specs: [storage]
   include: [iphone 14]
-  exclude: [pro, plus, max]
-  min_price: 200
+  exclude: [pro, plus, max, oneplus, galaxy, xiaomi, redmi, pixel, huawei]
+  min_price: 190
   max_price: 550
   queries: [iphone 14]
 
@@ -173,8 +177,8 @@
   category: iPhone
   specs: [storage]
   include: [iphone 14 pro]
-  exclude: [max]
-  min_price: 350
+  exclude: [max, oneplus, galaxy, xiaomi, redmi, pixel, huawei]
+  min_price: 240
   max_price: 750
   queries: [iphone 14 pro]
 
@@ -182,8 +186,8 @@
   category: iPhone
   specs: [storage]
   include: [iphone 15]
-  exclude: [pro, plus, max]
-  min_price: 350
+  exclude: [pro, plus, max, oneplus, galaxy, xiaomi, redmi, pixel, huawei]
+  min_price: 270
   max_price: 750
   queries: [iphone 15]
 
@@ -191,8 +195,8 @@
   category: iPhone
   specs: [storage]
   include: [iphone 15 pro]
-  exclude: [max]
-  min_price: 500
+  exclude: [max, oneplus, galaxy, xiaomi, redmi, pixel, huawei]
+  min_price: 330
   max_price: 950
   queries: [iphone 15 pro]
 
@@ -268,7 +272,7 @@
   category: iPhone
   specs: [storage]
   include: [iphone 12]
-  exclude: [pro, mini, max]
+  exclude: [pro, mini, max, oneplus, galaxy, xiaomi, redmi, pixel, huawei]
   min_price: 110
   max_price: 350
   queries: [iphone 12]
@@ -277,8 +281,8 @@
   category: iPhone
   specs: [storage]
   include: [iphone 12 pro]
-  exclude: [max]
-  min_price: 170
+  exclude: [max, oneplus, galaxy, xiaomi, redmi, pixel, huawei]
+  min_price: 120
   max_price: 450
   queries: [iphone 12 pro]
 
@@ -286,7 +290,8 @@
   category: iPhone
   specs: [storage]
   include: [iphone 13 pro max]
-  min_price: 300
+  exclude: [oneplus, galaxy, xiaomi, redmi, pixel, huawei]
+  min_price: 220
   max_price: 700
   queries: [iphone 13 pro max]
 
@@ -294,7 +299,8 @@
   category: iPhone
   specs: [storage]
   include: [iphone 14 pro max]
-  min_price: 400
+  exclude: [oneplus, galaxy, xiaomi, redmi, pixel, huawei]
+  min_price: 280
   max_price: 850
   queries: [iphone 14 pro max]
 
@@ -302,7 +308,8 @@
   category: iPhone
   specs: [storage]
   include: [iphone 15 pro max]
-  min_price: 600
+  exclude: [oneplus, galaxy, xiaomi, redmi, pixel, huawei]
+  min_price: 390
   max_price: 1100
   queries: [iphone 15 pro max]
 
@@ -310,8 +317,8 @@
   category: iPhone
   specs: [storage]
   include: [iphone 16]
-  exclude: [pro, plus, max, e]
-  min_price: 450
+  exclude: [pro, plus, max, e, oneplus, galaxy, xiaomi, redmi, pixel, huawei]
+  min_price: 350
   max_price: 900
   queries: [iphone 16]
 
@@ -319,8 +326,8 @@
   category: iPhone
   specs: [storage]
   include: [iphone 16 pro]
-  exclude: [max]
-  min_price: 650
+  exclude: [max, oneplus, galaxy, xiaomi, redmi, pixel, huawei]
+  min_price: 420
   max_price: 1150
   queries: [iphone 16 pro]
 
@@ -328,7 +335,8 @@
   category: iPhone
   specs: [storage]
   include: [iphone 16 pro max]
-  min_price: 800
+  exclude: [oneplus, galaxy, xiaomi, redmi, pixel, huawei]
+  min_price: 510
   max_price: 1350
   queries: [iphone 16 pro max]
 

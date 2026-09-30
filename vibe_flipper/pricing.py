@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
 from .matching import specs
+from .matching.rules import is_unavailable
 from .models import Listing, Product, utcnow
 
 
@@ -234,7 +235,10 @@ def listing_profit(listing: Listing, product: Product | None, fee_pct: float, fe
     resale = m.price * (1 - fee_pct / 100) - fee_fixed
     profit = resale - cost
     margin = profit / cost * 100 if cost else 0.0
-    usable = not (listing.is_wanted_ad or listing.is_broken)
+    # A bundle's price covers more than the product it is compared with, and a sold / reserved ad
+    # cannot be bought: neither is a deal (both still show their profit).
+    usable = not (listing.is_wanted_ad or listing.is_broken or getattr(listing, "is_bundle", False)
+                  or is_unavailable(getattr(listing, "title", None)))
     return Profit(
         market=m.price,
         cost=cost,
