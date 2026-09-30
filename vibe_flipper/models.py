@@ -31,6 +31,9 @@ class Product(Base):
     spec_keys: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
     # Match only listings whose extracted spec equals this, e.g. {"storage": 1024} for "SSD 1TB".
     spec_filter: Mapped[dict | None] = mapped_column(JSON, default=dict, nullable=True)
+    # Sizes that exist for this product, per spec: {"ram": [6, 12]} for an RTX 2060. Any other size read
+    # from the ad (e.g. "8gb" of a second card in the title) leaves the variant unknown. Empty = any size.
+    spec_values: Mapped[dict | None] = mapped_column(JSON, default=dict, nullable=True)
     # Price range per variant, overriding min/max_price for that variant: {"1TB": {"min": 500, "max": 900}}.
     variant_ranges: Mapped[dict | None] = mapped_column(JSON, default=dict, nullable=True)
 
@@ -89,6 +92,8 @@ class Listing(Base):
     is_bundle: Mapped[bool] = mapped_column(Boolean, default=False)
     # Manual override: never use this listing in market stats.
     excluded: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Flags set by hand in the UI, e.g. {"is_broken": false}: re-matching never overrides them.
+    manual_flags: Mapped[dict | None] = mapped_column(JSON, default=dict, nullable=True)
 
     product: Mapped[Product | None] = relationship(back_populates="listings")
     prices: Mapped[list["ListingPrice"]] = relationship(back_populates="listing", cascade="all, delete-orphan")

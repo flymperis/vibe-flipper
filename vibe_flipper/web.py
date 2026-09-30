@@ -635,6 +635,7 @@ def listing_toggle(request: Request, lid: int, flag: str, s: Session = Depends(g
         raise HTTPException(400)
     l = s.get(Listing, lid) or _404()
     setattr(l, flag, not getattr(l, flag))
+    l.manual_flags = {**(l.manual_flags or {}), flag: getattr(l, flag)}  # re-matching keeps it
     _background(jobs.match_listings, [], session=s)
     return _back(request)
 

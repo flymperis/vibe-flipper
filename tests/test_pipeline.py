@@ -84,3 +84,26 @@ def test_manual_is_untouched():
     l.product_id, l.match_method = None, "manual"
     m.apply(l)
     assert l.product_id is None and l.match_method == "manual"
+
+
+def test_rules_flag_bundles_and_keep_existing_flag():
+    m = Matcher(PRODUCTS, rs("rules"))
+    l = listing("RTX 3080 + τροφοδοτικό 750W", 450)
+    m.apply(l)
+    assert l.product_id == 2 and l.is_bundle
+    l2 = listing("Gigabyte RTX 3080 Gaming OC", 450)
+    l2.is_bundle = True  # found by the LLM earlier
+    m.apply(l2)
+    assert l2.is_bundle
+
+
+def test_flags_set_by_hand_survive_rematching():
+    m = Matcher(PRODUCTS, rs("rules"))
+    l = listing("RTX 3080 μικρό θέμα με ανεμιστήρα", 300)
+    l.is_broken, l.manual_flags = True, {"is_broken": True}  # the title says nothing
+    m.apply(l)
+    assert l.is_broken
+    l2 = listing("RTX 3080 + τροφοδοτικό 750W", 450)  # the PSU is only a gift
+    l2.manual_flags = {"is_bundle": False}
+    m.apply(l2)
+    assert not l2.is_bundle

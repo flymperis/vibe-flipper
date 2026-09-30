@@ -96,14 +96,16 @@ def fmt_gb(gb: int) -> str:
     return f"{gb // 1024}TB" if gb >= 1024 and gb % 1024 == 0 else f"{gb}GB"
 
 
-def variant_label(keys: list[str], ram: int | None, storage: int | None) -> str | None:
-    """'16GB / 512GB' for keys [ram, storage]; None if a required spec is unknown."""
+def variant_label(keys: list[str], ram: int | None, storage: int | None,
+                  allowed: dict[str, list[int]] | None = None) -> str | None:
+    """'16GB / 512GB' for keys [ram, storage]; None if a required spec is unknown,
+    or is not one of the product's `allowed` sizes (e.g. an RTX 2060 "8GB")."""
     if not keys:
         return None
     parts = []
     for k in keys:
         v = ram if k == "ram" else storage if k == "storage" else None
-        if v is None:
+        if v is None or ((allowed or {}).get(k) and v not in allowed[k]):
             return None
         parts.append(fmt_gb(v))
     return " / ".join(parts)

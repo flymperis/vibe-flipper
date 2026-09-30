@@ -72,6 +72,45 @@ def detect_flags(title: str) -> dict[str, bool]:
     }
 
 
+# Bundles: a second *major* item sold together with the product, so the price is not the product's.
+# Games, controllers, cases, chargers... are what consoles/handhelds normally come with: not bundles.
+_PC_PARTS = {"GPU", "CPU"}
+# chipset of a motherboard: "z 590", "b 760 m", "x 570" (normalized: letters and digits split)
+_MOTHERBOARD = re.compile(r"(?:^| )(?:[abhxz] [1-9]\d0(?= |$))|μητρικ|motherboard")
+_GPU_MODEL = re.compile(r"(?:^| )(?:rtx|gtx|rx|radeon(?: rx)?) (\d{3,4})(?= |$)")
+_DISCRETE_GPU = re.compile(r"(?:^| )(?:rtx|gtx|rx) \d{3,4}(?= |$)")  # not "Radeon 780M" graphics of a CPU
+_CPU = re.compile(r"ryzen|(?:^| )i [3579] \d{4,5}|core ultra|(?:^| )intel core")
+_PSU = re.compile(r"τροφοδοτικ|(?:^| )psu(?= |$)|(?:^| )\d{3,4} w(?= |$)")
+_RAM = re.compile(r"(?:^| )ddr [345](?= |$).*(?:^| )\d{1,3} gb|(?:^| )\d{1,3} gb.*(?:^| )ddr [345](?= |$)")
+# another device, unless it is the listing's own kind: (phrase, categories it belongs to)
+_DEVICES = [
+    ("monitor", ()), ("λαπτοπ", ("MacBook",)), ("laptop", ("MacBook",)), ("apple watch", ("Smartwatch",)),
+    ("airpods", ("Ακουστικά",)), ("macbook", ("MacBook",)), ("ipad", ("iPad",)), ("iphone", ("iPhone",)),
+    ("magic keyboard", ()), ("ps 5", ("PlayStation",)), ("playstation 5", ("PlayStation",)),
+    ("ps 4", ("PlayStation",)), ("playstation 4", ("PlayStation",)), ("xbox", ("Xbox",)),
+    ("nintendo", ("Nintendo",)), ("steam deck", ("Handheld PC",)), ("rog ally", ("Handheld PC",)),
+]
+
+_TRADE = re.compile(r"ανταλλαγ|αλλαγη|(?:^| )(?:trade|swap)(?= |$)")
+
+
+def is_bundle(title: str, category: str | None) -> bool:
+    """Title sells the product together with another major item: "i7-11700K + Z590 Aorus",
+    "RTX 2060 μαζί με RX 590", "Mac mini M4 + Samsung monitor", "iPhone 16 Pro + Apple Watch"."""
+    n = normalize(title)
+    if category in _PC_PARTS:
+        gpus = set(_GPU_MODEL.findall(n))
+        if (_MOTHERBOARD.search(n) or _PSU.search(n) or _RAM.search(n)
+                or (category == "GPU" and (len(gpus) > 1 or _CPU.search(n)))
+                or (category == "CPU" and _DISCRETE_GPU.search(n))):
+            return True
+    # "ανταλλαγή με iPad" offers a trade, "παιχνίδια για PS4" are games: neither is sold along
+    offered = _TRADE.split(n, 1)[0]
+    return any(category not in own and re.search(rf"(?:^| )(?<!για )(?<!for ){re.escape(_norm_phrase(phrase))}(?= |$)",
+                                                 offered)
+               for phrase, own in _DEVICES)
+
+
 @dataclass
 class ProductRule:
     id: int
@@ -84,13 +123,14 @@ class ProductRule:
     spec_filter: dict[str, int] = field(default_factory=dict)
     spec_keys: list[str] = field(default_factory=list)
     variant_ranges: dict[str, dict] = field(default_factory=dict)
+    spec_values: dict[str, list[int]] = field(default_factory=dict)
 
     @classmethod
     def from_product(cls, p) -> "ProductRule":
         return cls(p.id, p.name, [str(k) for k in p.include_keywords or []],
                    [str(k) for k in p.exclude_keywords or []],
                    p.regex or None, p.min_price, p.max_price, dict(p.spec_filter or {}),
-                   list(p.spec_keys or []), dict(p.variant_ranges or {}))
+                   list(p.spec_keys or []), dict(p.variant_ranges or {}), dict(p.spec_values or {}))
 
     def specs_ok(self, specs: dict | None) -> bool:
         """All required specs must be known and equal (e.g. storage == 1024 for an "SSD 1TB")."""
@@ -99,7 +139,7 @@ class ProductRule:
     def price_range(self, specs: dict | None = None) -> tuple[float | None, float | None]:
         """The variant's own range if one is set (e.g. iPhone "1TB"), else the product's."""
         if self.variant_ranges and specs:
-            label = variant_label(self.spec_keys, specs.get("ram"), specs.get("storage"))
+            label = variant_label(self.spec_keys, specs.get("ram"), specs.get("storage"), self.spec_values)
             vr = self.variant_ranges.get(label or "")
             if vr:
                 return vr.get("min"), vr.get("max")

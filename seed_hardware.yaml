@@ -25,12 +25,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 950
+  - 950 w
   min_price: 12
   max_price: 54
   queries: []
@@ -56,12 +64,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 960
+  - 960 w
   min_price: 16
   max_price: 72
   queries: []
@@ -87,12 +103,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 970
+  - 970 w
   min_price: 22
   max_price: 99
   queries: []
@@ -119,12 +143,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 980
+  - 980 w
   min_price: 28
   max_price: 126
   queries: []
@@ -150,12 +182,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 980
+  - 980 w
   min_price: 40
   max_price: 180
   queries: []
@@ -181,12 +221,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 1030
+  - 1030 w
   min_price: 16
   max_price: 72
   queries: []
@@ -213,12 +261,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 1050
+  - 1050 w
   min_price: 20
   max_price: 90
   queries: []
@@ -244,12 +300,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 1050
+  - 1050 w
   min_price: 28
   max_price: 126
   queries: []
@@ -275,17 +339,29 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 1060
+  - 1060 w
   min_price: 32
   max_price: 144
   queries: []
   specs:
   - ram
+  sizes:
+    ram:
+    - 3
+    - 6
 - name: GTX 1070
   category: GPU
   include:
@@ -309,12 +385,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 1070
+  - 1070 w
   min_price: 44
   max_price: 198
   queries: []
@@ -340,12 +424,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 1070
+  - 1070 w
   min_price: 52
   max_price: 234
   queries: []
@@ -372,12 +464,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 1080
+  - 1080 w
   - 1080 p
   - 1080 i
   min_price: 60
@@ -405,12 +505,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 1080
+  - 1080 w
   - 1080 p
   - 1080 i
   min_price: 84
@@ -439,12 +547,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 1650
+  - 1650 w
   min_price: 36
   max_price: 162
   queries: []
@@ -470,12 +586,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 1650
+  - 1650 w
   min_price: 40
   max_price: 180
   queries: []
@@ -503,12 +627,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 1660
+  - 1660 w
   min_price: 44
   max_price: 198
   queries: []
@@ -534,12 +666,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 1660
+  - 1660 w
   min_price: 50
   max_price: 225
   queries: []
@@ -565,12 +705,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 1660
+  - 1660 w
   min_price: 50
   max_price: 225
   queries: []
@@ -597,17 +745,29 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 2060
+  - 2060 w
   min_price: 56
   max_price: 252
   queries: []
   specs:
   - ram
+  sizes:
+    ram:
+    - 6
+    - 12
 - name: RTX 2060 Super
   category: GPU
   include:
@@ -630,12 +790,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 2060
+  - 2060 w
   min_price: 68
   max_price: 306
   queries: []
@@ -662,12 +830,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 2070
+  - 2070 w
   min_price: 72
   max_price: 324
   queries: []
@@ -693,12 +869,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 2070
+  - 2070 w
   min_price: 84
   max_price: 378
   queries: []
@@ -726,12 +910,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 2080
+  - 2080 w
   min_price: 96
   max_price: 432
   queries: []
@@ -757,12 +949,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 2080
+  - 2080 w
   min_price: 104
   max_price: 468
   queries: []
@@ -788,12 +988,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 2080
+  - 2080 w
   min_price: 132
   max_price: 594
   queries: []
@@ -819,17 +1027,29 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 3050
+  - 3050 w
   min_price: 64
   max_price: 288
   queries: []
   specs:
   - ram
+  sizes:
+    ram:
+    - 6
+    - 8
 - name: RTX 3060
   category: GPU
   include:
@@ -853,17 +1073,29 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 3060
+  - 3060 w
   min_price: 92
   max_price: 414
   queries: []
   specs:
   - ram
+  sizes:
+    ram:
+    - 8
+    - 12
 - name: RTX 3060 Ti
   category: GPU
   include:
@@ -886,12 +1118,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 3060
+  - 3060 w
   min_price: 100
   max_price: 450
   queries: []
@@ -918,12 +1158,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 3070
+  - 3070 w
   min_price: 116
   max_price: 522
   queries: []
@@ -949,12 +1197,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 3070
+  - 3070 w
   min_price: 128
   max_price: 576
   queries: []
@@ -981,17 +1237,29 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 3080
+  - 3080 w
   min_price: 160
   max_price: 720
   queries: []
   specs:
   - ram
+  sizes:
+    ram:
+    - 10
+    - 12
 - name: RTX 3080 Ti
   category: GPU
   include:
@@ -1014,12 +1282,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 3080
+  - 3080 w
   min_price: 192
   max_price: 864
   queries: []
@@ -1046,12 +1322,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 3090
+  - 3090 w
   min_price: 260
   max_price: 1170
   queries: []
@@ -1077,12 +1361,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 3090
+  - 3090 w
   min_price: 300
   max_price: 1350
   queries: []
@@ -1109,12 +1401,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 4060
+  - 4060 w
   min_price: 104
   max_price: 468
   queries: []
@@ -1140,17 +1440,29 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 4060
+  - 4060 w
   min_price: 132
   max_price: 594
   queries: []
   specs:
   - ram
+  sizes:
+    ram:
+    - 8
+    - 16
 - name: RTX 4070
   category: GPU
   include:
@@ -1176,12 +1488,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 4070
+  - 4070 w
   min_price: 188
   max_price: 846
   queries: []
@@ -1207,12 +1527,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 4070
+  - 4070 w
   min_price: 212
   max_price: 954
   queries: []
@@ -1239,12 +1567,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 4070
+  - 4070 w
   min_price: 240
   max_price: 1080
   queries: []
@@ -1270,12 +1606,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 4070
+  - 4070 w
   min_price: 272
   max_price: 1224
   queries: []
@@ -1302,12 +1646,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 4080
+  - 4080 w
   min_price: 340
   max_price: 1530
   queries: []
@@ -1333,12 +1685,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 4080
+  - 4080 w
   min_price: 368
   max_price: 1656
   queries: []
@@ -1364,12 +1724,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 4090
+  - 4090 w
   min_price: 640
   max_price: 2880
   queries: []
@@ -1395,12 +1763,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 5050
+  - 5050 w
   min_price: 92
   max_price: 414
   queries: []
@@ -1427,12 +1803,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 5060
+  - 5060 w
   min_price: 112
   max_price: 504
   queries: []
@@ -1458,17 +1842,29 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 5060
+  - 5060 w
   min_price: 152
   max_price: 684
   queries: []
   specs:
   - ram
+  sizes:
+    ram:
+    - 8
+    - 16
 - name: RTX 5070
   category: GPU
   include:
@@ -1492,12 +1888,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 5070
+  - 5070 w
   min_price: 208
   max_price: 936
   queries: []
@@ -1523,12 +1927,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 5070
+  - 5070 w
   min_price: 300
   max_price: 1350
   queries: []
@@ -1554,12 +1966,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 5080
+  - 5080 w
   min_price: 420
   max_price: 1890
   queries: []
@@ -1585,20 +2005,28 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 5090
+  - 5090 w
   min_price: 960
   max_price: 4320
   queries: []
 - name: RX 6400
   category: GPU
   include:
-  - '6400'
   - rx 6400
+  - radeon 6400
   exclude:
   - laptop
   - λαπτοπ
@@ -1617,12 +2045,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 6400
+  - 6400 w
   min_price: 36
   max_price: 162
   queries: []
@@ -1649,20 +2085,28 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 6500
+  - 6500 w
   min_price: 44
   max_price: 198
   queries: []
 - name: RX 6600
   category: GPU
   include:
-  - '6600'
   - rx 6600
+  - radeon 6600
   exclude:
   - 6600 xt
   - laptop
@@ -1682,12 +2126,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 6600
+  - 6600 w
   min_price: 68
   max_price: 306
   queries: []
@@ -1714,12 +2166,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 6600
+  - 6600 w
   min_price: 80
   max_price: 360
   queries: []
@@ -1746,20 +2206,28 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 6650
+  - 6650 w
   min_price: 84
   max_price: 378
   queries: []
 - name: RX 6700
   category: GPU
   include:
-  - '6700'
   - rx 6700
+  - radeon 6700
   exclude:
   - 6700 xt
   - laptop
@@ -1779,12 +2247,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 6700
+  - 6700 w
   min_price: 92
   max_price: 414
   queries: []
@@ -1811,12 +2287,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 6700
+  - 6700 w
   min_price: 104
   max_price: 468
   queries: []
@@ -1843,20 +2327,28 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 6750
+  - 6750 w
   min_price: 116
   max_price: 522
   queries: []
 - name: RX 6800
   category: GPU
   include:
-  - '6800'
   - rx 6800
+  - radeon 6800
   exclude:
   - 6800 xt
   - laptop
@@ -1876,12 +2368,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 6800
+  - 6800 w
   min_price: 132
   max_price: 594
   queries: []
@@ -1908,12 +2408,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 6800
+  - 6800 w
   min_price: 152
   max_price: 684
   queries: []
@@ -1940,12 +2448,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 6900
+  - 6900 w
   min_price: 172
   max_price: 774
   queries: []
@@ -1972,12 +2488,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 6950
+  - 6950 w
   min_price: 192
   max_price: 864
   queries: []
@@ -2005,12 +2529,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 7600
+  - 7600 w
   min_price: 88
   max_price: 396
   queries: []
@@ -2037,17 +2569,28 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 7600
+  - 7600 w
   min_price: 108
   max_price: 486
   queries: []
   specs:
   - ram
+  sizes:
+    ram:
+    - 16
 - name: RX 7700
   category: GPU
   include:
@@ -2072,12 +2615,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 7700
+  - 7700 w
   min_price: 132
   max_price: 594
   queries: []
@@ -2104,12 +2655,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 7700
+  - 7700 w
   min_price: 136
   max_price: 612
   queries: []
@@ -2136,12 +2695,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 7800
+  - 7800 w
   min_price: 172
   max_price: 774
   queries: []
@@ -2168,12 +2735,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 7900
+  - 7900 w
   min_price: 192
   max_price: 864
   queries: []
@@ -2201,12 +2776,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 7900
+  - 7900 w
   min_price: 240
   max_price: 1080
   queries: []
@@ -2233,12 +2816,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 7900
+  - 7900 w
   min_price: 300
   max_price: 1350
   queries: []
@@ -2265,22 +2856,34 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 9060
+  - 9060 w
   min_price: 128
   max_price: 576
   queries: []
   specs:
   - ram
+  sizes:
+    ram:
+    - 8
+    - 16
 - name: RX 9070
   category: GPU
   include:
-  - '9070'
   - rx 9070
+  - radeon 9070
   exclude:
   - 9070 xt
   - laptop
@@ -2300,12 +2903,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 9070
+  - 9070 w
   min_price: 224
   max_price: 1008
   queries: []
@@ -2332,12 +2943,20 @@
   - μητρικ*
   - motherboard
   - x 3 d
+  - monitor
+  - οθον*
+  - tv
+  - τηλεορασ*
+  - projector
+  - προτζεκτορ*
   - ryzen
   - i 3
   - i 5
   - i 7
   - i 9
   - intel core
+  - x 9070
+  - 9070 w
   min_price: 260
   max_price: 1170
   queries: []

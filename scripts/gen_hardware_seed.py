@@ -23,7 +23,9 @@ SYSTEM_WORDS = ["laptop", "λαπτοπ", "φορητ*", "notebook", "pc", "desk
                 "gaming pc", "mobile"]
 # Also hints of a whole build listed together (CPU + board + RAM + GPU).
 BUILD_WORDS = ["ddr 3", "ddr 4", "ddr 5", "μητρικ*", "motherboard", "x 3 d"]
-GPU_EXCLUDE = SYSTEM_WORDS + BUILD_WORDS + ["ryzen", "i 3", "i 5", "i 7", "i 9", "intel core"]
+# Screens: "1920x1080" / "1680x1050" must not look like a GTX 1080 / 1050.
+DISPLAY_WORDS = ["monitor", "οθον*", "tv", "τηλεορασ*", "projector", "προτζεκτορ*"]
+GPU_EXCLUDE = SYSTEM_WORDS + BUILD_WORDS + DISPLAY_WORDS + ["ryzen", "i 3", "i 5", "i 7", "i 9", "intel core"]
 CPU_EXCLUDE = SYSTEM_WORDS + ["rtx", "gtx", "rx", "μητρικ*", "motherboard", "combo", "bundle", "cooler master"]
 # Mobile CPU suffixes: "13900HX" must not match the desktop 13900.
 MOBILE_SUFFIXES = ["h", "hx", "hk", "hs", "u", "p", "t", "te", "m"]
@@ -66,11 +68,11 @@ AMD_GPU = [
     # RX 9000
     ("RX", "9060", "XT", 320), ("RX", "9070", "", 560), ("RX", "9070", "XT", 650),
 ]
-# Models sold with different VRAM sizes -> price variants by "ram" (= VRAM).
-VRAM_VARIANTS = {"GTX 1060", "RTX 2060", "RTX 3050", "RTX 3060", "RTX 3080", "RTX 4060 Ti", "RTX 5060 Ti",
-                 "RX 9060 XT", "RX 7600 XT"}
-# GPU numbers that are also Ryzen CPU numbers: require "rx"/"radeon" before a bare number.
-RYZEN_CLASH = {"7600", "7700", "7900", "9600", "9700", "9900"}
+# Models sold with different VRAM sizes -> price variants by "ram" (= VRAM), with the sizes that exist:
+# any other figure in an ad ("2060 ... μαζί με rx 590 8gb") is another card's, not a variant.
+VRAM_VARIANTS = {"GTX 1060": [3, 6], "RTX 2060": [6, 12], "RTX 3050": [6, 8], "RTX 3060": [8, 12],
+                 "RTX 3080": [10, 12], "RTX 4060 Ti": [8, 16], "RTX 5060 Ti": [8, 16], "RX 9060 XT": [8, 16],
+                 "RX 7600 XT": [16]}
 
 
 def gpu_entries(models, vendor: str) -> list[dict]:
@@ -83,7 +85,8 @@ def gpu_entries(models, vendor: str) -> list[dict]:
         phrase = f"{num} {sfx.lower()}".strip()
         # longer siblings that start with this phrase ("4070 ti" -> "4070 ti super"), or all siblings for the base
         siblings = [f"{num} {o}".strip() for o in by_num[num] if o != sfx.lower() and (not sfx or o.startswith(sfx.lower()))]
-        if vendor == "amd" and not sfx and num in RYZEN_CLASH:
+        if vendor == "amd" and not sfx:
+            # a bare AMD number is also a Ryzen 7600, a Shimano PD-6700, a TP-Link MR6400, a Samsung TV...
             include = [f"rx {num}", f"radeon {num}"]
         elif vendor == "amd":
             include = [phrase, f"rx {phrase}"]
@@ -97,13 +100,16 @@ def gpu_entries(models, vendor: str) -> list[dict]:
             "category": "GPU",
             "include": include,
             # "1080p" (resolution) must not look like a GTX 1080
-            "exclude": siblings + GPU_EXCLUDE + ([f"{num} p", f"{num} i"] if num == "1080" else []),
+            # "2560x1080" is a screen resolution, "1050W" a power supply
+            "exclude": siblings + GPU_EXCLUDE + [f"x {num}", f"{num} w"]
+                       + ([f"{num} p", f"{num} i"] if num == "1080" else []),
             "min_price": round(typ * 0.4),
             "max_price": round(typ * 1.8),
             "queries": [],
         }
         if name in VRAM_VARIANTS:
             e["specs"] = ["ram"]
+            e["sizes"] = {"ram": VRAM_VARIANTS[name]}
         out.append(e)
     return out
 

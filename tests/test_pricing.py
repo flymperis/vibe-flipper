@@ -50,6 +50,14 @@ def test_unknown_variant_compared_to_cheapest_variant():
     assert pr.market == 600 and pr.variant == "8GB / 256GB" and pr.assumed
 
 
+def test_unknown_variant_uses_product_median_when_lower():
+    """RTX 2060: the few ads stating "6GB" are the pricier ones (median 202.5), the
+    whole product goes for 180 -> a spec-less ad is compared to 180."""
+    gpu = dict(median=180, samples=13, spec_keys=["ram"], variant_stats={"6GB": {"median": 202.5, "count": 4}})
+    pr = listing_profit(_listing(130), _product(**gpu), 0, 0, 5)
+    assert pr.market == 180 and pr.variant == "6GB" and pr.assumed and not pr.low_data
+
+
 def test_rare_variant_is_estimated_from_nearest_variant():
     """24GB / 1TB has one ad: estimated from 16GB / 512GB (+10% per doubling, no
     pair to measure the step from), blended with its own ad."""

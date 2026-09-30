@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from vibe_flipper.matching.rules import ProductRule, contains, detect_flags, match, normalize
+from vibe_flipper.matching.rules import ProductRule, contains, detect_flags, is_bundle, match, normalize
 
 ROOT = Path(__file__).parents[1]
 SEED = [item for f in ("seed_products.yaml", "seed_hardware.yaml")
@@ -143,6 +143,15 @@ def test_variant_label():
     assert variant_label([], 8, 256) is None
 
 
+def test_variant_label_only_sizes_that_exist():
+    """RTX 2060 comes with 6 or 12GB: "2060 ... μαζί με rx 590 8gb" is not an 8GB variant."""
+    from vibe_flipper.matching.specs import variant_label
+    sizes = {"ram": [6, 12]}
+    assert variant_label(["ram"], 6, None, sizes) == "6GB"
+    assert variant_label(["ram"], 8, None, sizes) is None
+    assert variant_label(["ram"], 8, None, {}) == "8GB"
+
+
 
 @pytest.mark.parametrize("title,price,expected", [
     # NVIDIA siblings
@@ -184,6 +193,16 @@ def test_variant_label():
     ("Κονσόλα Xbox Series S, 500GB, 120fps 1080p, 4K 60fps", 250, "Xbox Series S"),
     ("MSI GTX 1080 Gaming X 8G", 150, "GTX 1080"),             # several unrelated models
     ("9800X3D, ROG STRIX X870-A GAMING, Trident Z5 RGB DDR5, RX 7800XT", 500, None),  # a whole build
+    # screens, power supplies and other products sharing a GPU's number
+    ("Dell S2721HN Monitor 27\" FHD 1920x1080", 90, None),
+    ("LG ULTRAWIDE 29\"  2560x1080 75HZ", 70, None),
+    ("HP LA2205wg 22\" 1680x1050", 20, None),
+    ("Πωλείται προτζεκτορας 1080 - 3200 lumen", 70, None),
+    ("Cougar GX 1050W Semi Modular 80 Plus Gold", 60, None),
+    ("Samsung UE32H6400AK  (32\")", 40, None),
+    ("TP-LINK TL-MR6400(EU) v4 Ασύρματο 4G Router", 50, None),
+    ("Shimano Ultegra PD-6700 πετάλια δρόμου", 100, None),
+    ("Sapphire Pulse Radeon 6600 8GB", 170, "RX 6600"),
 ])
 def test_hardware_products(title, price, expected):
     assert product_for(title, price) == expected
@@ -283,3 +302,34 @@ def test_parse_label_roundtrip():
     assert parse_label(["storage"], variant_label(["storage"], None, 512)) == {"storage": 512}
     assert parse_label(["storage"], "16GB / 1TB") is None
     assert parse_label([], "1TB") is None
+
+
+@pytest.mark.parametrize("title,category", [
+    ("i7-11700K + Gigabyte Z590 Aorus Master", "CPU"),
+    ("I7 10700kf+ASUS TUF B460 PLUS", "CPU"),
+    ("i7 14700F / HyperX Fury 32Gb DDR4 3200 / H610M-K D4 + Intel CPU Cooler", "CPU"),
+    ("Rtx 2060 oc μαζι με radeon rx 590 8gb", "GPU"),
+    ("AMD Radeon RX 6400 4GB + Τροφοδοτικό FORCE 500W", "GPU"),
+    ("Gigabyte GeForce GTX 970 winoforce g1 gaming+ amdryzen 52600", "GPU"),
+    ("Mac Mini M4 + Samsung Curved 24 Monitor", "Mac"),
+    ("Apple iPhone 16 Pro (Μαύρο/512 GB) + Apple Watch Series 10", "iPhone"),
+    ("iPad Air 2025 11 M3 128GB WiFi Blue + Magic Keyboard", "iPad"),
+    ("Nintendo switch lite και λαπτοπ asus x1504v", "Nintendo"),
+])
+def test_bundle(title, category):
+    assert is_bundle(title, category)
+
+
+@pytest.mark.parametrize("title,category", [
+    ("Sapphire Radeon RX 7800 XT 16GB GDDR6 NITRO+", "GPU"),
+    ("AMD Ryzen 7 3700X (Box) + Ψυκτρα AMD Wrath", "CPU"),
+    ("Ryzen 7 8700G με Radeon 780M graphics", "CPU"),
+    ("PS4 Slim 500GB + 2 Χειριστήρια + 6 Παιχνίδια", "PlayStation"),  # what consoles come with
+    ("Nintendo Switch 2 + Mario Kart World Bundle", "Nintendo"),
+    ("Steam Deck LCD 250GB+ 250GB SD Emulation Setup", "Handheld PC"),
+    ("MacBook Air 13,3 M1 ανταλλαγή με iPad", "MacBook"),  # a trade offer, not sold along
+    ("Apple Watch Series 9 45mm", "Smartwatch"),
+    ("Gigabyte RTX 3050 8GB OC Dual (Με Κουτί & Φρέσκια Θερμοπάστα)", "GPU"),
+])
+def test_not_bundle(title, category):
+    assert not is_bundle(title, category)

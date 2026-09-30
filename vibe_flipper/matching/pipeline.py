@@ -38,6 +38,7 @@ class Matcher:
         self.rules = [R.ProductRule.from_product(p) for p in active]
         self.by_id = {r.id: r for r in self.rules}
         self.catalog = [(p.id, p.name, p.category) for p in active]
+        self.category = {p.id: p.category for p in active}
         self.mode = rs.matching_mode
         self.llm = classifier or (OllamaClassifier(rs.ollama_url, rs.ollama_model) if rs.llm_enabled else None)
         self.llm_budget = llm_budget
@@ -66,6 +67,11 @@ class Matcher:
         return bool(self.vocab & set(R.normalize(listing.title).split()))
 
     def apply(self, listing: Listing) -> None:
+        self._apply(listing)
+        for flag, value in (listing.manual_flags or {}).items():  # what was set by hand wins
+            setattr(listing, flag, value)
+
+    def _apply(self, listing: Listing) -> None:
         found = specs.extract(f"{listing.title} {listing.description or ''}")
         if listing.llm_checked:  # keep what the LLM read when the text parser finds nothing
             listing.ram_gb = found["ram"] or listing.ram_gb
@@ -107,6 +113,8 @@ class Matcher:
                 elif pid is not None and not self.by_id[pid].specs_ok(got):
                     pid, note = None, f"llm said {self.by_id[pid].name}, but specs differ"
                 listing.product_id = pid
+                if pid is not None and R.is_bundle(listing.title, self.category[pid]):
+                    listing.is_bundle = True
                 listing.match_method = "llm" if pid else None
                 listing.match_confidence = res.confidence if pid else None
                 listing.match_note = note
@@ -117,3 +125,6 @@ class Matcher:
         listing.match_method = "rule" if rr.product_id else None
         listing.match_confidence = rr.confidence if rr.product_id else None
         listing.match_note = rr.note + (" (llm pending)" if use_llm and not rr.product_id and self.llm else "")
+        # only ever set here: a "Bundle" found by the LLM is kept
+        if rr.product_id and R.is_bundle(listing.title, self.category[rr.product_id]):
+            listing.is_bundle = True

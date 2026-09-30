@@ -80,7 +80,7 @@ def recompute_all(session: Session, window_days: int, countries: set[str] | froz
     for p in session.query(Product).all():
         keys = [k for k in (p.spec_keys or []) if k in specs.SPEC_KEYS]
         for l in p.listings:
-            l.variant = specs.variant_label(keys, l.ram_gb, l.storage_gb)
+            l.variant = specs.variant_label(keys, l.ram_gb, l.storage_gb, p.spec_values)
         eligible = eligible_listings(session, p.id, since, countries, sources)
         st = compute_stats([l.price for l in eligible])
         p.market_median = st.median if st else None
@@ -189,7 +189,9 @@ def market_for(listing: Listing, product: Product) -> Market | None:
     """Pick the reference price for a listing:
     1. its own variant: its median, or an estimate when it has few ads (see variant_market);
     2. variant unknown, on a product with variants -> the cheapest well-sampled
-       variant (conservative: "a deal even if it's the base model");
+       variant (conservative: "a deal even if it's the base model"), or the whole
+       product's median if lower: ads that state their specs tend to be the pricier
+       ones, so a few "6GB" ads can sit well above what spec-less ads go for;
     3. otherwise the whole product's median."""
     if product.spec_keys and listing.variant:
         m = variant_market(product, listing.variant)
@@ -198,6 +200,8 @@ def market_for(listing: Listing, product: Product) -> Market | None:
     vstats = {v: s for v, s in (product.variant_stats or {}).items() if s["count"] >= MIN_VARIANT_SAMPLES}
     if product.spec_keys and vstats:
         v, s = min(vstats.items(), key=lambda kv: kv[1]["median"])
+        if product.market_median is not None and product.market_median < s["median"]:
+            return Market(product.market_median, product.sample_count, v, assumed=True)
         return Market(s["median"], s["count"], v, assumed=True)
     if product.market_median is None:
         return None
